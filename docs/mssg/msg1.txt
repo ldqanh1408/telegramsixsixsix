@@ -1,0 +1,28 @@
+Hãy đóng vai một Kỹ sư Backend Java Senior và Chuyên gia về Clean Code / Design Patterns. 
+
+Tôi có một class dịch vụ xử lý logic tuần tự (như kiểm tra điều kiện, xác thực, phân phối dữ liệu) bằng một hàm `process` duy nhất. Hiện tại hàm này đang bị phình to, vi phạm nguyên lý Single Responsibility Principle (SRP) và Open-Closed Principle (OCP).
+
+Tôi muốn bạn tái cấu trúc (refactor) đoạn code này theo mô hình **Component-based Pipeline Pattern** (sử dụng Spring Beans và `@Order`) với các yêu cầu nghiêm ngặt sau:
+
+1. **Tạo đối tượng Ngữ cảnh (Context Class):**
+   - Thiết kế một class POJO (ví dụ: `...Context`) để đóng gói toàn bộ dữ liệu đầu vào.
+   - Class này cũng chứa các trường dữ liệu trung gian (kèm getter/setter) sinh ra từ bước trước để truyền cho bước sau sử dụng.
+
+2. **Định nghĩa Interface chung cho các bước (Step Interface):**
+   - Tạo một Functional Interface (ví dụ: `...Step`) có một hàm duy nhất là `Optional<ResultClass> execute(ContextClass context);`.
+   - Cơ chế trả về: Nếu một bước gặp lỗi hoặc muốn kết thúc sớm (Fail-fast/Short-circuit), nó sẽ trả về `Optional.of(Result)`. Nếu bước đó xử lý thành công và muốn đi tiếp, nó sẽ trả về `Optional.empty()`.
+
+3. **Bóc tách thành các Component độc lập:**
+   - Tách mỗi logic kiểm tra hoặc xử lý nghiệp vụ lớn thành một Class riêng biệt, đánh dấu `@Component`.
+   - Các class này phải implement Interface đã định nghĩa ở trên.
+   - Sử dụng annotation `@Order(X)` của Spring để quy định rõ thứ tự chạy của các bước (số nhỏ chạy trước).
+
+4. **Refactor Class Processor chính:**
+   - Class chính sẽ inject một danh sách `List<StepInterface> steps`. Nhờ `@Order`, Spring sẽ tự động sắp xếp danh sách này theo đúng thứ tự.
+   - Hàm `process` chính chỉ làm đúng 2 việc: 
+     a) Khởi tạo đối tượng Context từ các tham số đầu vào.
+     b) Dùng một vòng lặp `for` duyệt qua danh sách các bước. Nếu bất kỳ bước nào trả về `Optional.isPresent()`, lập tức ngắt vòng lặp và trả kết quả về luôn. Nếu đi hết vòng lặp mà không bị chặn, trả về kết quả thành công mặc định.
+
+Hãy phân tích kỹ đoạn code dưới đây, tự động đặt tên Class, Interface, Context và các Step sao cho tường minh, đúng chuẩn cấu trúc Spring Boot, sau đó viết lại toàn bộ mã nguồn hoàn chỉnh cho tôi.
+
+[DÁN MÃ NGUỒN CỦA BẠN VÀO ĐÂY]

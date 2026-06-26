@@ -49,22 +49,29 @@ Config binding: `application.yaml` → `AppProperties` record (`@ConfigurationPr
 
 ### Package structure
 
-| Package | Responsibility |
-|---|---|
-| `bot` | Use-case port (`BotManagementUseCase`), facade (`DynamicBotManager`), registry (`ManagedBotRegistry`), value object (`BotUsername`), command (`BotRegistration`) |
-| `activation` | Group activation/deactivation (`GroupBotActivationService`, `ActivationResult`) |
-| `admin` | REST API for bot CRUD (`AdminBotController`), guard, service, mapper, DTOs |
-| `telegram` | Webhook controller, `TelegramClient` (stateless HTTP), `CommandRouter`, command handlers |
-| `github` | Webhook controller, `SignatureVerifier` (HMAC-SHA256), event formatters |
-| `notification` | `NotificationService` — renders GitHub events and fans out to active groups |
-| `mongo` | Entity records and Spring Data repositories |
-| `config` | `AppProperties` configuration record |
+Each direct sub-package is a **Spring Modulith Application Module**; boundaries are declared in each `package-info.java` and enforced by `ModularityTests`. See [docs/architecture/modules.md](docs/architecture/modules.md).
+
+| Package (module) | Responsibility | allowedDependencies |
+|---|---|---|
+| `shared` | Shared kernel: `BotUsername`, `MessageFormatter` | — |
+| `config` | `AppProperties` configuration record | — |
+| `mongo` *(OPEN)* | Entity records and Spring Data repositories | — |
+| `activation` | Group activation/deactivation (`GroupBotActivationService`, `ActivationResult`); persistence port `ActivationStore` + adapter `MongoActivationStore` | `shared`, `mongo` |
+| `bot` | Use-case port (`BotManagementUseCase`), facade (`DynamicBotManager`), registry (`ManagedBotRegistry`), command (`BotRegistration`); persistence port `BotStore` + adapter `MongoBotStore` | `activation`, `shared`, `mongo` |
+| `admin` | REST API for bot CRUD (`AdminBotController`), guard, service, mapper, DTOs | `bot`, `config`, `mongo` |
+| `telegram` | Webhook controller, `TelegramSender` port + `TelegramClient` adapter, `CommandRouter`, pure command handlers | `bot`, `activation`, `shared`, `mongo` |
+| `notification` | `NotificationService` — source-agnostic broadcaster (fan out HTML to active groups) | `bot`, `telegram`, `mongo` |
+| `github` | Thin webhook controller, `GitHubWebhookProcessor` (pipeline), `GitHubEventRenderer` (formatters), `WebhookSignatureVerifier` port + `HmacSha256SignatureVerifier`, `GitHubWebhookResult` | `bot`, `notification`, `shared`, `mongo` |
 
 ### Key patterns
 
 - **Facade**: `DynamicBotManager` implements `BotManagementUseCase`, coordinates registry + activation
 - **Strategy**: `EventFormatter` interface — each GitHub event type has its own formatter bean
-- **Command**: `BotCommand` interface — each Telegram command is a separate `@Component`
+- **Command (pure)**: `BotCommand.execute()` returns `Optional<String>` (the reply); `CommandRouter` is the only sender. Commands have zero transport coupling
+- **Ports & Adapters (DIP)**: `TelegramSender` (impl `TelegramClient`) and `WebhookSignatureVerifier` (impl `HmacSha256SignatureVerifier`) — callers depend on interfaces, not infra
+- **Persistence ports**: business services depend on hand-written store interfaces (`BotStore`, `ActivationStore`), not Spring Data repos. Mongo adapters (`MongoBotStore`, `MongoActivationStore`, `@Component`) are the only classes touching `*Repository` — keeps domain logic free of DB details and mockable without a database
+- **Application Service + Result Object**: `GitHubWebhookProcessor` owns the webhook pipeline and returns web-agnostic `GitHubWebhookResult`; the controller only maps it to HTTP
+- **Modular monolith (Spring Modulith)**: 9 modules with enforced, acyclic boundaries (`@ApplicationModule(allowedDependencies=…)` in `package-info.java`); `mongo` is OPEN. `verify()` runs in `ModularityTests`
 - **Registry**: `ManagedBotRegistry` loads enabled bots into `ConcurrentHashMap` at startup, updates on CRUD
 - **Value Object**: `BotUsername` normalizes `@Bot` → `bot` (lowercase, strip @)
 - **Guard**: `AdminAccessGuard` uses constant-time comparison for admin token
@@ -74,11 +81,10 @@ Config binding: `application.yaml` → `AppProperties` record (`@ConfigurationPr
 ```
 GitHub repo event
   → POST /github/webhook/{botUsername}
-  → SignatureVerifier (HMAC-SHA256)
+  → GitHubWebhookProcessor: WebhookSignatureVerifier (HMAC-SHA256)
   → repo match check
-  → NotificationService.dispatch()
-  → EventFormatter.format() → HTML message
-  → broadcast to all active groups via TelegramClient
+  → GitHubEventRenderer.render() → EventFormatter.format() → HTML message
+  → NotificationService.broadcast() → fan out to all active groups via TelegramSender
 ```
 
 ```
@@ -153,7 +159,7 @@ Telegram user command
 
 1. Create a `@Component` class implementing `BotCommand`
 2. Return command name (e.g., `/mycommand`) from `name()`
-3. Implement `execute(CommandContext ctx)` — use `ctx.bot()` for bot identity/token
+3. Implement `execute(CommandContext ctx)` — return `Optional<String>` (the HTML reply, or `Optional.empty()` to stay silent). Do NOT inject `TelegramClient`/`TelegramSender`; the router sends
 4. CommandRouter auto-discovers it via Spring DI
 
 ## Adding a new GitHub event formatter

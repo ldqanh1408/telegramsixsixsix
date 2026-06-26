@@ -5,9 +5,9 @@ Spring Boot service nhận webhook từ Telegram/GitHub cho nhiều bot, lấy t
 ## Tài liệu
 
 - [docs/README.md](docs/README.md): mục lục tài liệu.
-- [docs/DOCKER.md](docs/DOCKER.md): chạy app + MongoDB bằng Docker Compose.
-- [docs/CONFIG.md](docs/CONFIG.md): cấu hình runtime, MongoDB, Telegram webhook, GitHub webhook.
-- [docs/ADMIN_CONTROLLER.md](docs/ADMIN_CONTROLLER.md): giải thích Admin Bot API, flow `/add @bot`, SOLID/design pattern.
+- [docs/setup/docker.md](docs/setup/docker.md): chạy app + MongoDB bằng Docker Compose.
+- [docs/setup/configuration.md](docs/setup/configuration.md): cấu hình runtime, MongoDB, Telegram webhook, GitHub webhook.
+- [docs/architecture/admin-api.md](docs/architecture/admin-api.md): giải thích Admin Bot API, flow `/add @bot`, SOLID/design pattern.
 
 ## Kiến trúc
 
@@ -108,7 +108,7 @@ Tắt nhận thông báo bằng `/remove @my_repo_bot`.
 
 ```bash
 ./mvnw clean package
-java -jar target/telegrambots-0.0.1-SNAPSHOT.jar
+java -jar telegrambots-app/target/telegrambots-app-0.0.1-SNAPSHOT.jar
 ```
 
 Nếu Maven wrapper lỗi trên Windows PowerShell, chạy trực tiếp Maven distribution trong `.m2/wrapper/dists/.../bin/mvn.cmd`.
@@ -120,4 +120,4 @@ cp .env.docker.example .env
 docker compose up --build
 ```
 
-Xem chi tiết tại [docs/DOCKER.md](docs/DOCKER.md).
+Xem chi tiết tại [docs/setup/docker.md](docs/setup/docker.md).

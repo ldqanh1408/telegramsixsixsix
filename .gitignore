@@ -3,7 +3,7 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-
+.*
 ### Secrets & runtime data ###
 config.properties
 .env
@@ -38,3 +38,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Agent & Tooling States ###
+.omc/
+.claude/
+.agents/

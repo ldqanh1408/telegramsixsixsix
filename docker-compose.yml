@@ -13,6 +13,7 @@ services:
       MONGODB_URI: mongodb://mongo:27017/telegrambots
       SPRING_MONGODB_URI: mongodb://mongo:27017/telegrambots
       ADMIN_TOKEN: ${ADMIN_TOKEN:-change-me-local-admin-token}
+      PUBLIC_URL: ${PUBLIC_URL:-}
     ports:
       - "${APP_PORT:-8080}:8080"
     restart: unless-stopped
@@ -31,6 +32,20 @@ services:
       retries: 10
       start_period: 10s
     restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: telegrambots-ngrok
+    restart: unless-stopped
+    command:
+      - "http"
+      - "app:8080"
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - app
 
 volumes:
   mongo_data:
