@@ -1,0 +1,13 @@
+# Copy to .env (gitignored) OR export as real env vars.
+# Application now manages bots dynamically in MongoDB — no per-bot config here.
+
+# MongoDB connection (default: local instance).
+MONGODB_URI=mongodb://localhost:27017/telegrambots
+
+# Guards /admin/** endpoints. Generate a strong random value:
+#   PowerShell: -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | %{[char]$_})
+#   Bash:       openssl rand -hex 32
+ADMIN_TOKEN=replace-with-strong-random-value
+
+# Optional
+PORT=8080

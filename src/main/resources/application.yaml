@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: telegrambots
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/telegrambots}
+  data:
+    mongodb:
+      auto-index-creation: true
+
+server:
+  port: ${PORT:8080}
+
+app:
+  admin:
+    # Used to guard /admin/** endpoints via X-Admin-Token header.
+    # MUST be set in production; an empty value disables admin routes entirely.
+    token: ${ADMIN_TOKEN:}
+
+logging:
+  level:
+    com.lede.telegrambots: INFO

@@ -1,0 +1,12 @@
+.git
+.idea
+.omc
+.agents
+target
+build
+dist
+data
+*.log
+.env
+config.properties
+*.iml
