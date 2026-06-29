@@ -59,8 +59,8 @@ Each direct sub-package is a **Spring Modulith Application Module**; boundaries 
 | `activation` | Group activation/deactivation (`GroupBotActivationService`, `ActivationResult`); persistence port `ActivationStore` + adapter `MongoActivationStore` | `shared`, `mongo` |
 | `bot` | Use-case port (`BotManagementUseCase`), facade (`DynamicBotManager`), registry (`ManagedBotRegistry`), command (`BotRegistration`); persistence port `BotStore` + adapter `MongoBotStore` | `activation`, `shared`, `mongo` |
 | `admin` | REST API for bot CRUD (`AdminBotController`), guard, service, mapper, DTOs | `bot`, `config`, `mongo` |
-| `telegram` | Webhook controller, `TelegramSender` port + `TelegramClient` adapter, `CommandRouter`, pure command handlers | `bot`, `activation`, `shared`, `mongo` |
-| `notification` | `NotificationService` — source-agnostic broadcaster (fan out HTML to active groups) | `bot`, `telegram`, `mongo` |
+| `telegram` | Webhook controller, `TelegramClient` adapter (implements `TelegramSender` from `shared`), `CommandRouter`, pure command handlers | `bot`, `activation`, `shared`, `mongo` |
+| `notification` | `NotificationService` — source-agnostic broadcaster (fan out HTML to active groups) | `bot`, `mongo`, `shared` |
 | `github` | Thin webhook controller, `GitHubWebhookProcessor` (pipeline), `GitHubEventRenderer` (formatters), `WebhookSignatureVerifier` port + `HmacSha256SignatureVerifier`, `GitHubWebhookResult` | `bot`, `notification`, `shared`, `mongo` |
 
 ### Key patterns

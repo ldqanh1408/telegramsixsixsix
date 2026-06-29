@@ -16,15 +16,8 @@
     <description>Multi-bot GitHub repo notifier for Telegram groups (MongoDB-backed) - Multi-Module parent</description>
     
     <modules>
-        <module>telegrambots-shared</module>
-        <module>telegrambots-config</module>
-        <module>telegrambots-mongo</module>
-        <module>telegrambots-activation</module>
-        <module>telegrambots-bot</module>
-        <module>telegrambots-telegram</module>
-        <module>telegrambots-notification</module>
-        <module>telegrambots-github</module>
-        <module>telegrambots-admin</module>
+        <module>telegrambots-core</module>
+        <module>telegrambots-web</module>
         <module>telegrambots-app</module>
     </modules>
 
@@ -45,47 +38,12 @@
             <!-- Internal Modules -->
             <dependency>
                 <groupId>com.lede</groupId>
-                <artifactId>telegrambots-shared</artifactId>
+                <artifactId>telegrambots-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.lede</groupId>
-                <artifactId>telegrambots-config</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-mongo</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-activation</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-bot</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-telegram</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-notification</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-github</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.lede</groupId>
-                <artifactId>telegrambots-admin</artifactId>
+                <artifactId>telegrambots-web</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

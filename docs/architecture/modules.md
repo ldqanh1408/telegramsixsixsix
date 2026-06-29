@@ -1,6 +1,6 @@
 # MODULES — Modular monolith (Spring Modulith)
 
-Codebase được module hóa dưới dạng một dự án Maven multi-module gồm 10 submodules riêng biệt, kết hợp **Spring Modulith 2.1** ở tầng runtime. Dự án được phân phối dưới dạng **một deployable duy nhất** (monolith) từ module `telegrambots-app`, nhưng biên giới giữa các module được phân tách rõ ràng ở cấu trúc thư mục/POM và được **enforce bằng test** — không module nào được chọc vào internal của module khác, không phụ thuộc ngoài `allowedDependencies` được khai báo, và không có dependency cycle.
+Codebase được module hóa dưới dạng một dự án Maven multi-module gồm 3 submodules chính (`telegrambots-core`, `telegrambots-web`, `telegrambots-app`), kết hợp **Spring Modulith 2.1** ở tầng runtime. Dự án được phân phối dưới dạng **một deployable duy nhất** (monolith) từ module `telegrambots-app`. Mặc dù được gộp lại thành 3 Maven modules để tránh phân mảnh, biên giới giữa các gói nghiệp vụ (Application Modules) vẫn được phân tách rõ ràng và được **enforce bằng test** của Spring Modulith — không gói nào được chọc vào internal của gói khác, không phụ thuộc ngoài `allowedDependencies` được khai báo, và không có dependency cycle.
 
 > Mỗi sub-package trực tiếp của `com.lede.telegrambots` là một **Application Module**. Khai báo biên giới nằm ở `package-info.java` của từng module.
 
@@ -61,7 +61,7 @@ graph TD
 | **Bot Management** | `bot` | Port `BotManagementUseCase` + facade, registry | `activation`, `shared`, `mongo` |
 | **Admin API** | `admin` | REST CRUD bot, token guard | `bot`, `config`, `mongo` |
 | **Telegram** | `telegram` | Webhook, `TelegramSender` port, command router | `bot`, `activation`, `shared`, `mongo` |
-| **Notification** | `notification` | Broadcast HTML tới group active (source-agnostic) | `bot`, `telegram`, `mongo` |
+| **Notification** | `notification` | Broadcast HTML tới group active (source-agnostic) | `bot`, `mongo`, `shared` |
 | **GitHub** | `github` | Webhook pipeline, verify, render event, gọi broadcast | `bot`, `notification`, `shared`, `mongo` |
 
 `mongo` là **OPEN module**: entity/repository là từ vựng persistence dùng chung, nên các feature module được phép tham chiếu trực tiếp mà không cần anti-corruption layer cho từng record.

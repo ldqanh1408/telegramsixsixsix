@@ -2,15 +2,8 @@ FROM maven:3.9.9-eclipse-temurin-21 AS build
 
 WORKDIR /workspace
 COPY pom.xml .
-COPY telegrambots-shared ./telegrambots-shared
-COPY telegrambots-config ./telegrambots-config
-COPY telegrambots-mongo ./telegrambots-mongo
-COPY telegrambots-activation ./telegrambots-activation
-COPY telegrambots-bot ./telegrambots-bot
-COPY telegrambots-telegram ./telegrambots-telegram
-COPY telegrambots-notification ./telegrambots-notification
-COPY telegrambots-github ./telegrambots-github
-COPY telegrambots-admin ./telegrambots-admin
+COPY telegrambots-core ./telegrambots-core
+COPY telegrambots-web ./telegrambots-web
 COPY telegrambots-app ./telegrambots-app
 
 RUN mvn -DskipTests clean package
