@@ -1,6 +1,6 @@
 package com.lede.telegrambots.application.bot;
 
-import com.lede.telegrambots.application.pipeline.Pipeline;
+import com.lede.telegrambots.domain.pipeline.Pipeline;
 import com.lede.telegrambots.application.port.out.ActivationRepository;
 import com.lede.telegrambots.application.port.out.BotCache;
 import com.lede.telegrambots.application.port.out.BotRepository;
@@ -12,6 +12,7 @@ public class DeleteBotUseCase {
 
     private final Pipeline<DeleteBotContext, Boolean> pipeline;
 
+    // Normal constructor
     public DeleteBotUseCase(BotRepository bots,
                             ActivationRepository activations,
                             BotCache cache,
@@ -23,6 +24,11 @@ public class DeleteBotUseCase {
                 new EvictCacheStep(cache),
                 new PublishDeleteEventStep(events)
         ));
+    }
+
+    // Spring autowired constructor
+    public DeleteBotUseCase(List<BotDeleteStep> steps) {
+        this.pipeline = new Pipeline<>(steps);
     }
 
     public void delete(String username) {

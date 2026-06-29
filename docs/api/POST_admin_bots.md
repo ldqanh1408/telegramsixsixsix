@@ -103,7 +103,7 @@ sequenceDiagram
     end
 
     Controller->>Service: save(null, request)
-    Service->>Service: request.toRegistration(null)<br/>→ BotRegistration
+    Service->>Mapper: toRegistration(null, request)<br/>→ BotRegistration
 
     Service->>Facade: upsertBot(registration)
     Facade->>Registry: upsert(registration)

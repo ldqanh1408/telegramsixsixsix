@@ -1,7 +1,5 @@
 package com.lede.telegrambots.admin.impl;
 
-
-
 import com.lede.telegrambots.admin.dto.AdminBotRequest;
 import com.lede.telegrambots.admin.dto.AdminBotResponse;
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
@@ -37,7 +35,7 @@ class AdminBotService {
         if (request == null) {
             throw new IllegalArgumentException("request body is required");
         }
-        ManagedBot saved = bots.upsertBot(request.toRegistration(usernameOverride));
+        ManagedBot saved = bots.upsertBot(mapper.toRegistration(usernameOverride, request));
         return mapper.toResponse(saved);
     }
 

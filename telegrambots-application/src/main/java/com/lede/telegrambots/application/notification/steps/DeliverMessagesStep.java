@@ -1,12 +1,12 @@
 package com.lede.telegrambots.application.notification.steps;
 
 import com.lede.telegrambots.application.notification.BroadcastContext;
-import com.lede.telegrambots.application.pipeline.Step;
+import com.lede.telegrambots.application.notification.BroadcastStep;
 import com.lede.telegrambots.application.port.out.TelegramGateway;
 import com.lede.telegrambots.domain.activation.GroupActivation;
 import java.util.Optional;
 
-public record DeliverMessagesStep(TelegramGateway telegram) implements Step<BroadcastContext, Boolean> {
+public record DeliverMessagesStep(TelegramGateway telegram) implements BroadcastStep {
     @Override
     public Optional<Boolean> execute(BroadcastContext ctx) {
         for (GroupActivation activation : ctx.getTargets()) {

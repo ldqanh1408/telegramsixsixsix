@@ -1,15 +1,19 @@
 package com.lede.telegrambots.github.impl;
 
-import com.lede.telegrambots.github.steps.*;
-
+import com.lede.telegrambots.application.notification.BroadcastUseCase;
+import com.lede.telegrambots.github.GitHubEventRenderer;
+import com.lede.telegrambots.github.GitHubWebhookResult;
+import com.lede.telegrambots.github.GitHubWebhookResult.Outcome;
 import com.lede.telegrambots.github.GitHubWebhookStep;
-
-import com.lede.telegrambots.github.*;
-
+import com.lede.telegrambots.github.steps.BotLookupStep;
+import com.lede.telegrambots.github.steps.EventExecutionStep;
+import com.lede.telegrambots.github.steps.EventPresenceStep;
+import com.lede.telegrambots.github.steps.JsonParsingStep;
+import com.lede.telegrambots.github.steps.PingCheckStep;
+import com.lede.telegrambots.github.steps.RepositoryMatchStep;
+import com.lede.telegrambots.github.steps.SignatureVerificationStep;
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
 import com.lede.telegrambots.application.port.out.WebhookSignatureVerifier;
-import com.lede.telegrambots.github.GitHubWebhookResult.Outcome;
-import com.lede.telegrambots.github.handler.GitHubEventHandler;
 import com.lede.telegrambots.domain.bot.ManagedBot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +37,8 @@ class GitHubWebhookProcessorTest {
 
     private BotManagementUseCase bots;
     private WebhookSignatureVerifier verifier;
-    private GitHubEventHandler pushHandler;
+    private GitHubEventRenderer renderer;
+    private BroadcastUseCase notifications;
     private GitHubWebhookProcessor processor;
 
     private static final byte[] BODY =
@@ -43,8 +48,9 @@ class GitHubWebhookProcessorTest {
     void setUp() {
         bots = mock(BotManagementUseCase.class);
         verifier = mock(WebhookSignatureVerifier.class);
-        pushHandler = mock(GitHubEventHandler.class);
-        when(pushHandler.supports("push")).thenReturn(true);
+        renderer = mock(GitHubEventRenderer.class);
+        notifications = mock(BroadcastUseCase.class);
+        when(renderer.render(eq("push"), any())).thenReturn(Optional.of("html"));
 
         // Build the pipeline manually to test in isolation
         List<GitHubWebhookStep> steps = List.of(
@@ -54,7 +60,7 @@ class GitHubWebhookProcessorTest {
                 new PingCheckStep(),
                 new JsonParsingStep(JsonMapper.builder().build()),
                 new RepositoryMatchStep(),
-                new EventExecutionStep(List.of(pushHandler))
+                new EventExecutionStep(renderer, notifications)
         );
 
         processor = new GitHubWebhookProcessor(steps);
@@ -72,7 +78,8 @@ class GitHubWebhookProcessorTest {
         GitHubWebhookResult r = processor.process("ghost", "push", "sig", "d1", BODY);
 
         assertEquals(Outcome.UNKNOWN_BOT, r.outcome());
-        verify(pushHandler, never()).execute(any(), any());
+        verify(renderer, never()).render(anyString(), any());
+        verify(notifications, never()).broadcast(any(), anyString());
     }
 
     @Test
@@ -83,7 +90,8 @@ class GitHubWebhookProcessorTest {
         GitHubWebhookResult r = processor.process("my_bot", "push", "sig", "d1", BODY);
 
         assertEquals(Outcome.BAD_SIGNATURE, r.outcome());
-        verify(pushHandler, never()).execute(any(), any());
+        verify(renderer, never()).render(anyString(), any());
+        verify(notifications, never()).broadcast(any(), anyString());
     }
 
     @Test
@@ -94,7 +102,8 @@ class GitHubWebhookProcessorTest {
         GitHubWebhookResult r = processor.process("my_bot", "ping", "sig", "d1", BODY);
 
         assertEquals(Outcome.PONG, r.outcome());
-        verify(pushHandler, never()).execute(any(), any());
+        verify(renderer, never()).render(anyString(), any());
+        verify(notifications, never()).broadcast(any(), anyString());
     }
 
     @Test
@@ -105,7 +114,8 @@ class GitHubWebhookProcessorTest {
         GitHubWebhookResult r = processor.process("my_bot", "push", "sig", "d1", BODY);
 
         assertEquals(Outcome.REPO_MISMATCH, r.outcome());
-        verify(pushHandler, never()).execute(any(), any());
+        verify(renderer, never()).render(anyString(), any());
+        verify(notifications, never()).broadcast(any(), anyString());
     }
 
     @Test
@@ -116,6 +126,7 @@ class GitHubWebhookProcessorTest {
         GitHubWebhookResult r = processor.process("my_bot", "push", "sig", "d1", BODY);
 
         assertEquals(Outcome.OK, r.outcome());
-        verify(pushHandler).execute(any(ManagedBot.class), any());
+        verify(renderer).render(eq("push"), any());
+        verify(notifications).broadcast(any(ManagedBot.class), eq("html"));
     }
 }

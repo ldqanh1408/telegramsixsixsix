@@ -2,6 +2,7 @@ package com.lede.telegrambots.application.port.in;
 
 import com.lede.telegrambots.domain.activation.ActivationResult;
 import com.lede.telegrambots.domain.activation.GroupActivation;
+import com.lede.telegrambots.application.activation.GroupActivationCommandResult;
 import com.lede.telegrambots.domain.bot.BotRegistration;
 import com.lede.telegrambots.domain.bot.ManagedBot;
 
@@ -25,7 +26,11 @@ public interface BotManagementUseCase {
 
     ActivationResult activate(ManagedBot bot, long chatId);
 
+    GroupActivationCommandResult activateRequested(ManagedBot bot, long chatId, String requestedUsername);
+
     boolean deactivate(ManagedBot bot, long chatId);
+
+    GroupActivationCommandResult deactivateRequested(ManagedBot bot, long chatId, String requestedUsername);
 
     boolean isActive(ManagedBot bot, long chatId);
 

@@ -1,7 +1,5 @@
 package com.lede.telegrambots.admin.dto;
 
-import com.lede.telegrambots.domain.bot.BotRegistration;
-
 public record AdminBotRequest(
         String username,
         String token,
@@ -10,15 +8,4 @@ public record AdminBotRequest(
         String githubWebhookSecret,
         Boolean enabled
 ) {
-    public BotRegistration toRegistration(String usernameOverride) {
-        String effectiveUsername = usernameOverride == null ? username : usernameOverride;
-        return new BotRegistration(
-                effectiveUsername,
-                token,
-                telegramWebhookSecret,
-                githubRepo,
-                githubWebhookSecret,
-                enabled
-        );
-    }
 }

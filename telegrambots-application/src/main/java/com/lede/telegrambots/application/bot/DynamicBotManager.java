@@ -1,6 +1,7 @@
 package com.lede.telegrambots.application.bot;
 
 import com.lede.telegrambots.application.activation.GroupBotActivationService;
+import com.lede.telegrambots.application.activation.GroupActivationCommandResult;
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
 import com.lede.telegrambots.application.port.out.BotCache;
 import com.lede.telegrambots.domain.activation.ActivationResult;
@@ -62,8 +63,18 @@ public class DynamicBotManager implements BotManagementUseCase {
     }
 
     @Override
+    public GroupActivationCommandResult activateRequested(ManagedBot bot, long chatId, String requestedUsername) {
+        return activations.activateRequested(bot, chatId, requestedUsername);
+    }
+
+    @Override
     public boolean deactivate(ManagedBot bot, long chatId) {
         return activations.deactivate(bot, chatId);
+    }
+
+    @Override
+    public GroupActivationCommandResult deactivateRequested(ManagedBot bot, long chatId, String requestedUsername) {
+        return activations.deactivateRequested(bot, chatId, requestedUsername);
     }
 
     @Override

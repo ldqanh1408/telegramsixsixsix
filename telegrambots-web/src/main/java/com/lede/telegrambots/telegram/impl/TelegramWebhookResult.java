@@ -1,7 +1,5 @@
 package com.lede.telegrambots.telegram.impl;
 
-import com.lede.telegrambots.telegram.*;
-
 /**
  * Result of processing a Telegram webhook update.
  */

@@ -12,6 +12,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class GroupBotActivationServiceTest {
@@ -40,6 +42,52 @@ class GroupBotActivationServiceTest {
         assertThat(result.activation().id()).isEqualTo("activation-id");
         assertThat(result.activation().active()).isTrue();
         assertThat(result.activation().activatedAt()).isEqualTo(firstActivated);
+    }
+
+    @Test
+    void activateRequestedIgnoresCommandsForDifferentBot() {
+        ActivationRepository store = mock(ActivationRepository.class);
+        ManagedBot bot = bot("helper_bot", true);
+
+        GroupBotActivationService service = new GroupBotActivationService(store);
+        GroupActivationCommandResult result = service.activateRequested(bot, -100123L, "@other_bot");
+
+        assertThat(result.status()).isEqualTo(GroupActivationCommandResult.Status.BOT_MISMATCH);
+        verify(store, never()).save(any());
+    }
+
+    @Test
+    void activateRequestedReturnsAlreadyActiveWhenRecordIsActive() {
+        ActivationRepository store = mock(ActivationRepository.class);
+        ManagedBot bot = bot("helper_bot", true);
+        Instant firstActivated = Instant.parse("2026-06-25T00:00:00Z");
+        GroupActivation active = new GroupActivation(
+                "activation-id",
+                "helper_bot-id",
+                "helper_bot",
+                -100123L,
+                true,
+                firstActivated,
+                firstActivated
+        );
+        when(store.find("helper_bot", -100123L)).thenReturn(Optional.of(active));
+
+        GroupBotActivationService service = new GroupBotActivationService(store);
+        GroupActivationCommandResult result = service.activateRequested(bot, -100123L, "@helper_bot");
+
+        assertThat(result.status()).isEqualTo(GroupActivationCommandResult.Status.ALREADY_ACTIVE);
+        assertThat(result.activation().newlyActivated()).isFalse();
+    }
+
+    @Test
+    void deactivateRequestedReturnsNotActiveWhenNothingWasActive() {
+        ActivationRepository store = mock(ActivationRepository.class);
+        ManagedBot bot = bot("helper_bot", true);
+
+        GroupBotActivationService service = new GroupBotActivationService(store);
+        GroupActivationCommandResult result = service.deactivateRequested(bot, -100123L, "helper_bot");
+
+        assertThat(result.status()).isEqualTo(GroupActivationCommandResult.Status.NOT_ACTIVE);
     }
 
     private static ManagedBot bot(String username, boolean enabled) {

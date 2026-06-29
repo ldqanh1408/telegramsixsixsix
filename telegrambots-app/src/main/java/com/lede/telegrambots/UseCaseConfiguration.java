@@ -1,63 +1,175 @@
 package com.lede.telegrambots;
 
+import com.lede.telegrambots.application.activation.ActivateGroupStep;
+import com.lede.telegrambots.application.activation.DeactivateGroupStep;
 import com.lede.telegrambots.application.activation.GroupBotActivationService;
+import com.lede.telegrambots.application.activation.steps.*;
+import com.lede.telegrambots.application.bot.BotDeleteStep;
 import com.lede.telegrambots.application.bot.BotQueryService;
+import com.lede.telegrambots.application.bot.BotUpsertStep;
 import com.lede.telegrambots.application.bot.DeleteBotUseCase;
 import com.lede.telegrambots.application.bot.DynamicBotManager;
 import com.lede.telegrambots.application.bot.UpsertBotUseCase;
+import com.lede.telegrambots.application.notification.BroadcastStep;
+import com.lede.telegrambots.application.bot.steps.*;
 import com.lede.telegrambots.application.notification.BroadcastUseCase;
+import com.lede.telegrambots.application.notification.steps.*;
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
-import com.lede.telegrambots.application.port.out.ActivationRepository;
-import com.lede.telegrambots.application.port.out.BotCache;
-import com.lede.telegrambots.application.port.out.BotRepository;
-import com.lede.telegrambots.application.port.out.DomainEventPublisher;
-import com.lede.telegrambots.application.port.out.TelegramGateway;
-import com.lede.telegrambots.domain.bot.BotDomainService;
+import com.lede.telegrambots.application.port.out.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
-/**
- * Composition root for the (framework-free) application layer. The use cases are plain Java objects;
- * here — in the only module that depends on every layer — they are wired into Spring beans against
- * the outbound ports, whose implementations live in the infrastructure layer and are component-scanned.
- */
+import java.util.List;
+
 @Configuration
 class UseCaseConfiguration {
-
-    @Bean
-    BotDomainService botDomainService() {
-        return new BotDomainService();
-    }
 
     @Bean
     BotQueryService botQueryService(BotRepository bots) {
         return new BotQueryService(bots);
     }
 
+    // --- UpsertBot Steps ---
     @Bean
-    UpsertBotUseCase upsertBotUseCase(BotRepository bots,
-                                      BotDomainService domainService,
-                                      BotCache cache,
-                                      DomainEventPublisher events) {
-        return new UpsertBotUseCase(bots, domainService, cache, events);
+    @Order(1)
+    NormalizeAndLoadStep normalizeAndLoadStep(BotRepository bots) {
+        return new NormalizeAndLoadStep(bots);
     }
 
     @Bean
-    DeleteBotUseCase deleteBotUseCase(BotRepository bots,
-                                      ActivationRepository activations,
-                                      BotCache cache,
-                                      DomainEventPublisher events) {
-        return new DeleteBotUseCase(bots, activations, cache, events);
+    @Order(2)
+    MergeStep mergeStep() {
+        return new MergeStep();
     }
 
     @Bean
-    GroupBotActivationService groupBotActivationService(ActivationRepository activations) {
-        return new GroupBotActivationService(activations);
+    @Order(3)
+    PersistStep persistStep(BotRepository bots) {
+        return new PersistStep(bots);
     }
 
     @Bean
-    BroadcastUseCase broadcastUseCase(TelegramGateway telegram, ActivationRepository activations) {
-        return new BroadcastUseCase(telegram, activations);
+    @Order(4)
+    RefreshCacheStep refreshCacheStep(BotCache cache) {
+        return new RefreshCacheStep(cache);
+    }
+
+    @Bean
+    @Order(5)
+    PublishEventStep publishEventStep(DomainEventPublisher events) {
+        return new PublishEventStep(events);
+    }
+
+    @Bean
+    UpsertBotUseCase upsertBotUseCase(List<BotUpsertStep> steps) {
+        return new UpsertBotUseCase(steps);
+    }
+
+    // --- DeleteBot Steps ---
+    @Bean
+    @Order(1)
+    LoadStep loadStep(BotRepository bots) {
+        return new LoadStep(bots);
+    }
+
+    @Bean
+    @Order(2)
+    DeleteActivationsStep deleteActivationsStep(ActivationRepository activations) {
+        return new DeleteActivationsStep(activations);
+    }
+
+    @Bean
+    @Order(3)
+    DeleteBotStep deleteBotStep(BotRepository bots) {
+        return new DeleteBotStep(bots);
+    }
+
+    @Bean
+    @Order(4)
+    EvictCacheStep evictCacheStep(BotCache cache) {
+        return new EvictCacheStep(cache);
+    }
+
+    @Bean
+    @Order(5)
+    PublishDeleteEventStep publishDeleteEventStep(DomainEventPublisher events) {
+        return new PublishDeleteEventStep(events);
+    }
+
+    @Bean
+    DeleteBotUseCase deleteBotUseCase(List<BotDeleteStep> steps) {
+        return new DeleteBotUseCase(steps);
+    }
+
+    // --- Activate Steps ---
+    @Bean
+    @Order(1)
+    LoadExistingActivationForActivateStep loadExistingActivationForActivateStep(ActivationRepository store) {
+        return new LoadExistingActivationForActivateStep(store);
+    }
+
+    @Bean
+    @Order(2)
+    CheckAlreadyActiveStep checkAlreadyActiveStep() {
+        return new CheckAlreadyActiveStep();
+    }
+
+    @Bean
+    @Order(3)
+    SaveActivationStep saveActivationStep(ActivationRepository store) {
+        return new SaveActivationStep(store);
+    }
+
+    // --- Deactivate Steps ---
+    @Bean
+    @Order(1)
+    LoadExistingActivationForDeactivateStep loadExistingActivationForDeactivateStep(ActivationRepository store) {
+        return new LoadExistingActivationForDeactivateStep(store);
+    }
+
+    @Bean
+    @Order(2)
+    CheckNotActiveStep checkNotActiveStep() {
+        return new CheckNotActiveStep();
+    }
+
+    @Bean
+    @Order(3)
+    SaveDeactivatedStep saveDeactivatedStep(ActivationRepository store) {
+        return new SaveDeactivatedStep(store);
+    }
+
+    @Bean
+    GroupBotActivationService groupBotActivationService(
+            ActivationRepository activations,
+            List<ActivateGroupStep> activateSteps,
+            List<DeactivateGroupStep> deactivateSteps) {
+        return new GroupBotActivationService(activations, activateSteps, deactivateSteps);
+    }
+
+    // --- Broadcast Steps ---
+    @Bean
+    @Order(1)
+    LoadTargetsStep loadTargetsStep(ActivationRepository activations) {
+        return new LoadTargetsStep(activations);
+    }
+
+    @Bean
+    @Order(2)
+    ValidateTargetsStep validateTargetsStep() {
+        return new ValidateTargetsStep();
+    }
+
+    @Bean
+    @Order(3)
+    DeliverMessagesStep deliverMessagesStep(TelegramGateway telegram) {
+        return new DeliverMessagesStep(telegram);
+    }
+
+    @Bean
+    BroadcastUseCase broadcastUseCase(List<BroadcastStep> steps) {
+        return new BroadcastUseCase(steps);
     }
 
     @Bean

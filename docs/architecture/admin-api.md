@@ -151,7 +151,7 @@ Luồng xử lý:
 
 1. Controller kiểm tra `X-Admin-Token`.
 2. Controller chuyển request cho `AdminBotService`.
-3. `AdminBotRequest.toRegistration(...)` tạo `BotRegistration`.
+3. `AdminBotMapper.toRegistration(...)` tạo `BotRegistration`.
 4. `BotManagementUseCase.upsertBot(...)` đi qua `DynamicBotManager`, sau đó `ManagedBotRegistry` chuẩn hóa username, lưu bot vào MongoDB và cập nhật registry `runningBots`.
 5. `AdminBotMapper` trả về `AdminBotResponse` đã ẩn token thật.
 

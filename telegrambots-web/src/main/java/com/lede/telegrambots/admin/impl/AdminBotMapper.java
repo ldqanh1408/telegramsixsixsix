@@ -1,9 +1,9 @@
 package com.lede.telegrambots.admin.impl;
 
-
-
+import com.lede.telegrambots.admin.dto.AdminBotRequest;
 import com.lede.telegrambots.admin.dto.AdminBotResponse;
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
+import com.lede.telegrambots.domain.bot.BotRegistration;
 import com.lede.telegrambots.domain.bot.ManagedBot;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +30,18 @@ class AdminBotMapper {
                 bots.activeGroupCount(bot),
                 bot.createdAt(),
                 bot.updatedAt()
+        );
+    }
+
+    BotRegistration toRegistration(String usernameOverride, AdminBotRequest request) {
+        String effectiveUsername = usernameOverride == null ? request.username() : usernameOverride;
+        return new BotRegistration(
+                effectiveUsername,
+                request.token(),
+                request.telegramWebhookSecret(),
+                request.githubRepo(),
+                request.githubWebhookSecret(),
+                request.enabled()
         );
     }
 

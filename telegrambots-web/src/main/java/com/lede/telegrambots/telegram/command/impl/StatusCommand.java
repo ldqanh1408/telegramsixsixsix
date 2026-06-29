@@ -2,9 +2,6 @@ package com.lede.telegrambots.telegram.command.impl;
 
 import com.lede.telegrambots.telegram.command.BotCommand;
 import com.lede.telegrambots.telegram.command.CommandContext;
-
-
-
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
 import com.lede.telegrambots.domain.shared.MessageFormatter;
 import org.springframework.stereotype.Component;

@@ -1,14 +1,9 @@
 package com.lede.telegrambots.telegram.steps;
 
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
+import com.lede.telegrambots.telegram.command.BotCommand;
 import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
 import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
-
-import com.lede.telegrambots.telegram.TelegramWebhookStep;
-
-import com.lede.telegrambots.telegram.*;
-
-import com.lede.telegrambots.telegram.command.BotCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
@@ -16,10 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import java.util.Optional;
 
 @Component
 @Order(5)

@@ -1,10 +1,10 @@
 package com.lede.telegrambots.application.activation.steps;
 
 import com.lede.telegrambots.application.activation.DeactivateContext;
-import com.lede.telegrambots.application.pipeline.Step;
+import com.lede.telegrambots.application.activation.DeactivateGroupStep;
 import java.util.Optional;
 
-public class CheckNotActiveStep implements Step<DeactivateContext, Boolean> {
+public class CheckNotActiveStep implements DeactivateGroupStep {
     @Override
     public Optional<Boolean> execute(DeactivateContext ctx) {
         if (ctx.getExisting() == null || !ctx.getExisting().active()) {

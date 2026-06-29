@@ -1,17 +1,16 @@
 package com.lede.telegrambots.github.steps;
 
-import com.lede.telegrambots.github.impl.GitHubWebhookContext;
+import com.lede.telegrambots.application.notification.BroadcastUseCase;
+import com.lede.telegrambots.github.GitHubEventRenderer;
 import com.lede.telegrambots.github.GitHubWebhookResult;
-import com.lede.telegrambots.github.GitHubWebhookStep;
-
 import com.lede.telegrambots.github.GitHubWebhookResult.Outcome;
-import com.lede.telegrambots.github.handler.GitHubEventHandler;
+import com.lede.telegrambots.github.GitHubWebhookStep;
+import com.lede.telegrambots.github.impl.GitHubWebhookContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -19,31 +18,22 @@ import java.util.Optional;
 public class EventExecutionStep implements GitHubWebhookStep {
 
     private static final Logger log = LoggerFactory.getLogger(EventExecutionStep.class);
-    private final List<GitHubEventHandler> handlers;
+    private final GitHubEventRenderer renderer;
+    private final BroadcastUseCase notifications;
 
-    public EventExecutionStep(List<GitHubEventHandler> handlers) {
-        this.handlers = handlers;
+    public EventExecutionStep(GitHubEventRenderer renderer, BroadcastUseCase notifications) {
+        this.renderer = renderer;
+        this.notifications = notifications;
     }
 
     @Override
     public Optional<GitHubWebhookResult> execute(GitHubWebhookContext context) {
-        boolean handled = false;
-        String event = context.getEvent();
-        for (GitHubEventHandler handler : handlers) {
-            if (handler.supports(event)) {
-                try {
-                    handler.execute(context.getBot(), context.getPayload());
-                    handled = true;
-                } catch (Exception e) {
-                    log.error("Error executing handler for event={} delivery={} for @{}",
-                            event, context.getDelivery(), context.getBot().username(), e);
-                }
-                break;
-            }
-        }
-
-        if (!handled) {
-            log.debug("No handler found/executed for event={}", event);
+        try {
+            renderer.render(context.getEvent(), context.getPayload())
+                    .ifPresent(html -> notifications.broadcast(context.getBot(), html));
+        } catch (Exception e) {
+            log.error("Error broadcasting GitHub event={} delivery={} for @{}",
+                    context.getEvent(), context.getDelivery(), context.getBot().username(), e);
         }
 
         return Optional.of(GitHubWebhookResult.of(Outcome.OK, "ok"));

@@ -1,12 +1,12 @@
 package com.lede.telegrambots.application.notification.steps;
 
 import com.lede.telegrambots.application.notification.BroadcastContext;
-import com.lede.telegrambots.application.pipeline.Step;
+import com.lede.telegrambots.application.notification.BroadcastStep;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Optional;
 
-public class ValidateTargetsStep implements Step<BroadcastContext, Boolean> {
+public class ValidateTargetsStep implements BroadcastStep {
     private static final Logger log = System.getLogger(ValidateTargetsStep.class.getName());
 
     @Override

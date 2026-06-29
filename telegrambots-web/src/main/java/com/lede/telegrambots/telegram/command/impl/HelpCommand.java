@@ -2,9 +2,6 @@ package com.lede.telegrambots.telegram.command.impl;
 
 import com.lede.telegrambots.telegram.command.BotCommand;
 import com.lede.telegrambots.telegram.command.CommandContext;
-
-
-
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;

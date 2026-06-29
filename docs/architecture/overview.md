@@ -164,7 +164,7 @@ Admin
 AdminBotController
   → AdminAccessGuard.denyIfUnauthorized()     // check token
   → AdminBotService.save()
-    → AdminBotRequest.toRegistration()        // DTO → command object
+    → AdminBotMapper.toRegistration()         // DTO → command object
     → BotManagementUseCase.upsertBot()
       → ManagedBotRegistry.upsert()
         → BotUsername.of() normalize          // chuẩn hóa

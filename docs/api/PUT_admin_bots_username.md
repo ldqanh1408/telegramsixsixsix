@@ -91,7 +91,7 @@ sequenceDiagram
     Controller->>Service: save("my_repo_bot", request)
     Note over Service: usernameOverride = "my_repo_bot" (từ path)<br/>→ body.username bị bỏ qua
 
-    Service->>Service: request.toRegistration("my_repo_bot")<br/>→ BotRegistration(username="my_repo_bot",<br/>   token=null, githubRepo="owner/new-repo", ...)
+    Service->>Mapper: toRegistration("my_repo_bot", request)<br/>→ BotRegistration(username="my_repo_bot",<br/>   token=null, githubRepo="owner/new-repo", ...)
 
     Service->>Facade: upsertBot(registration)
     Facade->>Registry: upsert(registration)

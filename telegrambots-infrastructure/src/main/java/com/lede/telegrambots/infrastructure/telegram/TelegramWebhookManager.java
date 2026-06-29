@@ -1,9 +1,11 @@
 package com.lede.telegrambots.infrastructure.telegram;
 
-import com.lede.telegrambots.application.pipeline.Pipeline;
+import com.lede.telegrambots.domain.pipeline.Pipeline;
+import com.lede.telegrambots.domain.pipeline.Step;
 import com.lede.telegrambots.domain.bot.BotDeletedEvent;
 import com.lede.telegrambots.domain.bot.BotSavedEvent;
 import com.lede.telegrambots.infrastructure.telegram.steps.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -23,9 +25,8 @@ public class TelegramWebhookManager {
     private final Pipeline<SyncSavedBotContext, Boolean> savedPipeline;
     private final Pipeline<SyncDeletedBotContext, Boolean> deletedPipeline;
 
-    public TelegramWebhookManager(
-            TelegramClient telegramClient,
-            @Value("${app.public-url:}") String publicUrl) {
+    // Standard constructor for test convenience
+    public TelegramWebhookManager(TelegramClient telegramClient, String publicUrl) {
         this.publicUrl = publicUrl != null ? publicUrl.trim() : "";
         this.savedPipeline = new Pipeline<>(List.of(
                 new CheckEnabledStep(telegramClient),
@@ -36,6 +37,17 @@ public class TelegramWebhookManager {
         this.deletedPipeline = new Pipeline<>(List.of(
                 new DeleteWebhookOnDeleteStep(telegramClient)
         ));
+    }
+
+    // Spring wired constructor
+    @Autowired
+    public TelegramWebhookManager(
+            List<Step<SyncSavedBotContext, Boolean>> savedSteps,
+            List<Step<SyncDeletedBotContext, Boolean>> deletedSteps,
+            @Value("${app.public-url:}") String publicUrl) {
+        this.publicUrl = publicUrl != null ? publicUrl.trim() : "";
+        this.savedPipeline = new Pipeline<>(savedSteps);
+        this.deletedPipeline = new Pipeline<>(deletedSteps);
     }
 
     @EventListener

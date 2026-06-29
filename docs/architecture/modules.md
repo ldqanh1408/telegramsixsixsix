@@ -33,8 +33,8 @@ graph TD
 
 | Maven module | Package gốc | Trách nhiệm | Phụ thuộc (pom) |
 |---|---|---|---|
-| **telegrambots-domain** | `…domain.*` | Entities & value objects thuần (`ManagedBot`, `GroupActivation`, `BotUsername`, `BotDomainService`, domain events) | — |
-| **telegrambots-application** | `…application.*` | Use case + outbound/inbound ports + pipeline abstraction (thuần Java) | `domain` |
+| **telegrambots-domain** | `…domain.*` | Entities, value objects, domain events, shared pipeline abstraction (`ManagedBot`, `GroupActivation`, `BotUsername`, `Step`, `Pipeline`) | — |
+| **telegrambots-application** | `…application.*` | Use case + outbound/inbound ports (thuần Java) | `domain` |
 | **telegrambots-infrastructure** | `…infrastructure.*` | Driven adapters: Mongo (document + repo + mapper), `TelegramClient`, HMAC verifier, event publisher, bot cache | `application` |
 | **telegrambots-web** | `…admin/…github/…telegram` | Driving adapters: REST controllers, DTO, webhook pipelines, formatters, command handlers | `application`, `domain` |
 | **telegrambots-app** | `…telegrambots` | Spring Boot bootstrap + composition root (wire use case thuần thành `@Bean`) | `web`, `infrastructure` |
@@ -54,7 +54,7 @@ graph TD
 
 ## Pipeline pattern (dùng chung cho mọi nghiệp vụ tuần tự)
 
-`application.pipeline` cung cấp một abstraction generic dùng lại ở **cả** webhook lẫn business logic:
+`domain.pipeline` cung cấp một abstraction generic dùng lại ở **cả** webhook lẫn business logic:
 
 - `Step<C, R>` — một stage: `Optional<R> execute(C ctx)` (rỗng = đi tiếp, có giá trị = short-circuit).
 - `Pipeline<C, R>` — chạy danh sách step theo thứ tự, trả về kết quả của step short-circuit đầu tiên.
@@ -96,7 +96,7 @@ grep -rn "import org.springframework\|com.mongodb\|tools.jackson\|jakarta\." \
 Để đảm bảo các module đóng gói tốt và không bị rò rỉ chi tiết cài đặt (encapsulation), dự án áp dụng quy tắc phân tách **Interface (Ports)** và **Implementation (Adapters)** ở cấp độ package:
 
 1. **Các file Interface (Ports) công khai**: Được đặt trực tiếp tại thư mục gốc (root package) của module tương ứng (ví dụ: `com.lede.telegrambots.telegram` chứa `TelegramWebhookStep.java`, `com.lede.telegrambots.github` chứa `GitHubWebhookStep.java`, `com.lede.telegrambots.telegram.command` chứa `BotCommand.java`). Các module bên ngoài chỉ được giao tiếp qua các Interface này.
-2. **Các file Implementation (Adapters/Concrete classes)**: Được đặt hoàn toàn trong package con tên là `.impl` (ví dụ: `com.lede.telegrambots.telegram.impl`, `com.lede.telegrambots.telegram.command.impl`, `com.lede.telegrambots.github.impl`, `com.lede.telegrambots.github.formatter.impl`, `com.lede.telegrambots.github.handler.impl`, `com.lede.telegrambots.admin.impl`). Các module khác không được phép import trực tiếp các class trong các package `.impl` này.
+2. **Các file Implementation (Adapters/Concrete classes)**: Được đặt hoàn toàn trong package con tên là `.impl` (ví dụ: `com.lede.telegrambots.telegram.impl`, `com.lede.telegrambots.telegram.command.impl`, `com.lede.telegrambots.github.impl`, `com.lede.telegrambots.github.formatter.impl`, `com.lede.telegrambots.admin.impl`). Các module khác không được phép import trực tiếp các class trong các package `.impl` này.
 3. **Infrastructure Persistence**: Tách biệt lớp thực thi Mongo (`MongoBotRepository`, `MongoActivationRepository`) ở package gốc của persistence khỏi các Mongo Documents, Document Repositories, và Mappers (được ẩn đi trong `persistence.mongo.impl`).
 4. **Tách biệt Pipeline Steps**: Để hạn chế việc gộp tất cả logic vào một class usecase hay một package impl khổng lồ ("cục to đùng"), toàn bộ các bước thực thi của Pipeline được chia nhỏ thành các class/record độc lập nằm trong package con `.steps` tương ứng (ví dụ: `application.bot.steps`, `application.activation.steps`, `application.notification.steps`, `telegram.steps`, `github.steps`).
 
@@ -110,6 +110,5 @@ grep -rn "import org.springframework\|com.mongodb\|tools.jackson\|jakarta\." \
 - **Endpoint / controller / DTO** → `web`.
 - **Phân tách Interface & Impl**: Interface công khai ở root package của module, các class implement đặt trong package con `.impl`.
 - **Chia nhỏ Pipeline Steps**: Tránh khai báo các step dưới dạng inner classes hay gộp chung trong một file. Tách mỗi step thành một class/record riêng biệt đặt trong package con `.steps` của feature tương ứng.
-- Cần một nghiệp vụ nhiều bước → dựng bằng `Step` + `Pipeline` của `application.pipeline`.
+- Cần một nghiệp vụ nhiều bước → dựng bằng `Step` + `Pipeline` của `domain.pipeline`.
 - Không bao giờ để `domain`/`application` import Spring/Mongo/Jackson; không để `web` import `infrastructure`.
-

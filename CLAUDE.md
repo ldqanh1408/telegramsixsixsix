@@ -54,8 +54,8 @@ Clean Architecture (Onion). Each layer is a **Maven module**; the dependency rul
 
 | Maven module | Root package | Responsibility | Depends on |
 |---|---|---|---|
-| `telegrambots-domain` | `…domain.*` | Pure entities/value objects/domain service: `ManagedBot`, `GroupActivation`, `ActivationResult`, `BotRegistration`, `BotUsername`, `MessageFormatter`, `BotDomainService`, `Bot*Event`. No framework. | — |
-| `telegrambots-application` | `…application.*` | Use cases + ports + pipeline abstraction (pure Java). Inbound port `BotManagementUseCase` (facade `DynamicBotManager`); use cases `UpsertBotUseCase`/`DeleteBotUseCase` (pipeline), `BotQueryService`, `GroupBotActivationService`, `BroadcastUseCase`; outbound ports `BotRepository`, `ActivationRepository`, `BotCache`, `TelegramGateway`, `WebhookSignatureVerifier`, `DomainEventPublisher`; `pipeline.Step`/`pipeline.Pipeline`. | `domain` |
+| `telegrambots-domain` | `…domain.*` | Pure entities/value objects/shared abstractions: `ManagedBot`, `GroupActivation`, `ActivationResult`, `BotRegistration`, `BotUsername`, `MessageFormatter`, `Bot*Event`, `pipeline.Step`/`pipeline.Pipeline`. No framework. | — |
+| `telegrambots-application` | `…application.*` | Use cases + ports (pure Java). Inbound port `BotManagementUseCase` (facade `DynamicBotManager`); use cases `UpsertBotUseCase`/`DeleteBotUseCase` (pipeline), `BotQueryService`, `GroupBotActivationService`, `BroadcastUseCase`; outbound ports `BotRepository`, `ActivationRepository`, `BotCache`, `TelegramGateway`, `WebhookSignatureVerifier`, `DomainEventPublisher`. | `domain` |
 | `telegrambots-infrastructure` | `…infrastructure.*` | Driven adapters: Mongo (`*Document`, Spring Data repos, `*Mapper`, `Mongo*Repository`), `ManagedBotRegistry` (cache), `TelegramClient` + `TelegramWebhookManager`, `HmacSha256SignatureVerifier`, `SpringDomainEventPublisher`. | `application` |
 | `telegrambots-web` | `…admin` / `…github` / `…telegram` | Driving adapters: REST controllers, DTOs, webhook pipelines (`*Step`/`*Processor`/`*Context`/`*Result`), `GitHubEventRenderer` + formatters, pure command handlers. | `application`, `domain` |
 | `telegrambots-app` | `…telegrambots` | Spring Boot bootstrap + composition root (`UseCaseConfiguration` wires the pure use cases as `@Bean`). | `web`, `infrastructure` |
@@ -63,10 +63,11 @@ Clean Architecture (Onion). Each layer is a **Maven module**; the dependency rul
 ### Key patterns
 
 - **Clean Architecture (Onion)**: dependency rule points inward; `domain` and `application` are framework-free, enforced by the Maven module graph (no `web`↔`infrastructure` dependency). No Spring Modulith.
-- **Pipeline (shared)**: `application.pipeline.Step<C,R>` + `Pipeline<C,R>` back **both** webhook processing (`GitHubWebhookStep`/`TelegramWebhookStep` are typed aliases) **and** write use cases (`UpsertBotUseCase`, `DeleteBotUseCase` are pipelines of named stages)
+- **Pipeline (shared)**: `domain.pipeline.Step<C,R>` + `Pipeline<C,R>` back **both** webhook processing (`GitHubWebhookStep`/`TelegramWebhookStep` are typed aliases) **and** multi-step application workflows (`UpsertBotUseCase`, `DeleteBotUseCase`, activation, broadcast)
 - **Facade**: `DynamicBotManager` implements `BotManagementUseCase`, routing to the focused use cases
 - **Strategy**: `EventFormatter` interface — each GitHub event type has its own formatter bean
 - **Command (pure)**: `BotCommand.execute()` returns `Optional<String>` (the reply); the command-execution step is the only sender. Commands have zero transport coupling
+- **Application Result Object**: group activation command rules return `GroupActivationCommandResult`; web commands only render those outcomes
 - **Ports & Adapters (DIP)**: outbound ports in `application.port.out` (`BotRepository`, `ActivationRepository`, `BotCache`, `TelegramGateway`, `WebhookSignatureVerifier`, `DomainEventPublisher`) implemented by `infrastructure.*` `@Component`s
 - **Entity ↔ Document split**: domain records are persistence-free; `infrastructure.persistence.mongo` holds the `@Document` twins + `*Mapper`
 - **Application Service + Result Object**: `GitHubWebhookProcessor` owns the webhook pipeline and returns web-agnostic `GitHubWebhookResult`; the controller only maps it to HTTP
@@ -165,7 +166,7 @@ Telegram user command
 1. In `telegrambots-web`, create a `@Component` class in `github.formatter` implementing `EventFormatter`
 2. Return event name (e.g., `"deployment"`) from `eventName()`
 3. Implement `format(JsonNode payload)` — return `Optional.empty()` to drop
-4. `GitHubEventRenderer` auto-discovers it via the injected `List<EventFormatter>` (wire a matching `github.handler.GitHubEventHandler` if the event needs broadcasting)
+4. `GitHubEventRenderer` auto-discovers it via the injected `List<EventFormatter>`; `EventExecutionStep` renders and hands non-empty messages to `BroadcastUseCase`
 
 ## Adding a new outbound dependency (DB/HTTP/etc.)
 

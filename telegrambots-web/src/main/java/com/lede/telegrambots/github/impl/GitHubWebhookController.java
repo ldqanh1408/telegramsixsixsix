@@ -1,7 +1,6 @@
 package com.lede.telegrambots.github.impl;
 
-import com.lede.telegrambots.github.*;
-
+import com.lede.telegrambots.github.GitHubWebhookResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;

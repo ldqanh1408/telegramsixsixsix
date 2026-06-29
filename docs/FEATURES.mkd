@@ -1,0 +1,308 @@
+# Existing Features &amp; Source Notes
+
+> **Project**: 	elegrambots — Multi-bot GitHub → Telegram notification platform
+> **Architecture**: Clean Architecture (Onion) + Pipeline Pattern + Rich Domain Model
+> **Stack**: Java 21 · Spring Boot 4 · MongoDB · Docker · ngrok
+
+---
+
+## 1. Domain Layer (	elegrambots-domain)
+
+### 1.1 Entities (Rich Domain Model)
+
+| Class | Location | Description |
+|---|---|---|
+| ManagedBot | domain/bot/ManagedBot.java | Core entity: token, username, githubRepo, webhook secrets, enabled flag. Contains factory create() and mutation merge(BotRegistration) with direct invariant checks. |
+| GroupActivation | domain/activation/GroupActivation.java | Binding entity: this bot is allowed to send to this chat. Validated on construction. State-mutating methods: ctivate() / deactivate(). |
+| ActivationResult | domain/activation/ActivationResult.java | Value object returned by activation: carries the saved GroupActivation plus 
+ewlyActivated flag. |
+
+### 1.2 Value Objects &amp; Shared
+
+| Class | Location | Description |
+|---|---|---|
+| BotUsername | domain/shared/BotUsername.java | Normalizes @ prefix for consistent lookup keys. |
+| MessageFormatter | domain/shared/MessageFormatter.java | HTML formatting helpers (code(), etc.) for Telegram messages. |
+| BotRegistration | domain/bot/BotRegistration.java | Immutable input DTO for creating / updating a bot. Nullable fields = partial update semantics. |
+
+### 1.3 Domain Events
+
+| Class | Location | Description |
+|---|---|---|
+| BotSavedEvent | domain/bot/BotSavedEvent.java | Published when a bot is created or updated (carries token, username, enabled flag). |
+| BotDeletedEvent | domain/bot/BotDeletedEvent.java | Published when a bot is deleted. Triggers webhook de-registration. |
+
+### 1.4 Pipeline Abstraction
+
+| Class | Location | Description |
+|---|---|---|
+| Pipeline<C, R> | domain/pipeline/Pipeline.java | Generic sequential pipeline: runs a list of Step until one short-circuits with a result. Accepts List<? extends Step<C,R>> for covariant step injection. |
+| Step<C, R> | domain/pipeline/Step.java | Single-method interface: Optional<R> execute(C context). Empty = continue; present = short-circuit. |
+
+---
+
+## 2. Application Layer (	elegrambots-application)
+
+### 2.1 Inbound Ports (Driving)
+
+| Interface | Location | Description |
+|---|---|---|
+| BotManagementUseCase | pplication/port/in/BotManagementUseCase.java | Facade for all bot operations: indEnabled, upsertBot, deleteBot, ctivate, deactivate, isActive, ctiveGroupCount, ctiveGroups. |
+
+### 2.2 Outbound Ports (Driven)
+
+| Interface | Location | Description |
+|---|---|---|
+| BotRepository | pplication/port/out/BotRepository.java | Persistence port: find by username, findAll, save, delete. |
+| ActivationRepository | pplication/port/out/ActivationRepository.java | find, save, isActive, countActive, findActive, deleteAllFor. |
+| BotCache | pplication/port/out/BotCache.java | In-memory cache port: indEnabled, put, evict. |
+| TelegramGateway | pplication/port/out/TelegramGateway.java | Send HTML messages to a Telegram chat. |
+| DomainEventPublisher | pplication/port/out/DomainEventPublisher.java | Publish domain events (BotSavedEvent, BotDeletedEvent). |
+| WebhookSignatureVerifier | pplication/port/out/WebhookSignatureVerifier.java | Verify HMAC-SHA256 GitHub webhook signatures. |
+
+### 2.3 Use Cases (Pipelines)
+
+#### UpsertBotUseCase — pplication/bot/UpsertBotUseCase.java
+Creates or updates a bot; fires BotSavedEvent.
+
+| # | Step | Description |
+|---|---|---|
+| 1 | NormalizeAndLoadStep | Normalize username, load existing record from DB. |
+| 2 | MergeStep | Call ManagedBot.create() or existing.merge(). |
+| 3 | PersistStep | Save merged entity to MongoDB. |
+| 4 | RefreshCacheStep | Push saved bot into the in-memory BotCache. |
+| 5 | PublishEventStep | Publish BotSavedEvent triggering webhook sync. |
+
+#### DeleteBotUseCase — pplication/bot/DeleteBotUseCase.java
+Deletes a bot and all related data; fires BotDeletedEvent.
+
+| # | Step | Description |
+|---|---|---|
+| 1 | LoadStep | Find bot by username; abort if not found. |
+| 2 | DeleteActivationsStep | Remove all group activations for this bot. |
+| 3 | DeleteBotStep | Delete bot document from MongoDB. |
+| 4 | EvictCacheStep | Remove bot from in-memory cache. |
+| 5 | PublishDeleteEventStep | Publish BotDeletedEvent triggering webhook de-registration. |
+
+#### GroupBotActivationService — pplication/activation/GroupBotActivationService.java
+Manages chat group activations with two independent pipelines.
+
+**Activate Pipeline:**
+
+| # | Step | Description |
+|---|---|---|
+| 1 | LoadExistingActivationForActivateStep | Load existing record or null. |
+| 2 | CheckAlreadyActiveStep | Short-circuit if already active. |
+| 3 | SaveActivationStep | Call ctivate() or create new; save. |
+
+**Deactivate Pipeline:**
+
+| # | Step | Description |
+|---|---|---|
+| 1 | LoadExistingActivationForDeactivateStep | Load existing record; short-circuit if none. |
+| 2 | CheckNotActiveStep | Short-circuit if already inactive. |
+| 3 | SaveDeactivatedStep | Call deactivate() and save. |
+
+#### BroadcastUseCase — pplication/notification/BroadcastUseCase.java
+Fan-out: sends an HTML message to all active groups of a bot.
+
+| # | Step | Description |
+|---|---|---|
+| 1 | LoadTargetsStep | Query all active GroupActivation for the bot. |
+| 2 | ValidateTargetsStep | Short-circuit if target list is empty. |
+| 3 | DeliverMessagesStep | Call TelegramGateway.sendHtml() per group. |
+
+### 2.4 Query &amp; Facade
+
+| Class | Location | Description |
+|---|---|---|
+| BotQueryService | pplication/bot/BotQueryService.java | Read-only queries: indAny, listBots. |
+| DynamicBotManager | pplication/bot/DynamicBotManager.java | Implements BotManagementUseCase. Thin facade delegating to focused use cases. |
+
+---
+
+## 3. Infrastructure Layer (	elegrambots-infrastructure)
+
+### 3.1 Persistence (MongoDB)
+
+| Class | Location | Description |
+|---|---|---|
+| MongoBotRepository | infrastructure/persistence/mongo/MongoBotRepository.java | Implements BotRepository port. Delegates to Spring Data ManagedBotDocumentRepository. |
+| MongoActivationRepository | infrastructure/persistence/mongo/MongoActivationRepository.java | Implements ActivationRepository port. |
+| ManagedBotDocument | .../mongo/impl/ManagedBotDocument.java | MongoDB @Document decoupled from domain entity. |
+| GroupActivationDocument | .../mongo/impl/GroupActivationDocument.java | MongoDB @Document for activations. |
+| ManagedBotMapper | .../mongo/impl/ManagedBotMapper.java | Maps ManagedBotDocument to/from ManagedBot. |
+| GroupActivationMapper | .../mongo/impl/GroupActivationMapper.java | Maps GroupActivationDocument to/from GroupActivation. |
+
+### 3.2 Cache
+
+| Class | Location | Description |
+|---|---|---|
+| ManagedBotRegistry | infrastructure/cache/ManagedBotRegistry.java | Implements BotCache. ConcurrentHashMap warmed on startup via @PostConstruct. Falls back to DB on miss. |
+
+### 3.3 Telegram API Client
+
+| Class | Location | Description |
+|---|---|---|
+| TelegramClient | infrastructure/telegram/TelegramClient.java | Implements TelegramGateway. Three internal pipelines for sendHtml, setWebhook, deleteWebhook, each guarded by ValidateTokenStep. |
+
+### 3.4 Webhook Lifecycle Manager — TelegramWebhookManager
+
+Listens to @EventListener for domain events and keeps webhook registrations in sync.
+
+**Saved Pipeline (BotSavedEvent):**
+
+| # | Step | Description |
+|---|---|---|
+| 1 | CheckEnabledStep | If disabled: delete webhook, short-circuit. |
+| 2 | CheckPublicUrlStep | If PUBLIC_URL is missing: log warning, short-circuit. |
+| 3 | FormatWebhookUrlStep | Build full webhook URL from public URL + username. |
+| 4 | RegisterWebhookStep | Call TelegramClient.setWebhook(). |
+
+**Deleted Pipeline (BotDeletedEvent):**
+
+| # | Step | Description |
+|---|---|---|
+| 1 | DeleteWebhookOnDeleteStep | Call TelegramClient.deleteWebhook(). |
+
+### 3.5 Security
+
+| Class | Location | Description |
+|---|---|---|
+| HmacSha256SignatureVerifier | infrastructure/security/HmacSha256SignatureVerifier.java | Implements WebhookSignatureVerifier. Constant-time comparison to prevent timing attacks. |
+
+### 3.6 Event Publishing
+
+| Class | Location | Description |
+|---|---|---|
+| SpringDomainEventPublisher | infrastructure/event/SpringDomainEventPublisher.java | Implements DomainEventPublisher using Spring ApplicationEventPublisher. |
+
+---
+
+## 4. Web Layer (	elegrambots-web)
+
+### 4.1 Admin REST API
+
+Base path: /admin/bots — all endpoints require X-Admin-Token header.
+
+| Endpoint | Method | Description |
+|---|---|---|
+| /admin/bots | GET | List all bots. |
+| /admin/bots/{username} | GET | Find single bot. Returns 404 if not found. |
+| /admin/bots | POST | Create or update bot (username from request body). |
+| /admin/bots/{username} | PUT | Update bot (username from URL path overrides body). |
+| /admin/bots/{username} | DELETE | Delete bot + all activations + de-register webhook. |
+
+Supporting classes:
+
+| Class | Location | Description |
+|---|---|---|
+| AdminAccessGuard | dmin/impl/AdminAccessGuard.java | Validates X-Admin-Token header. Returns 403 if token mismatch. |
+| AdminBotService | dmin/impl/AdminBotService.java | Thin service: delegates to BotManagementUseCase, maps via AdminBotMapper. |
+| AdminBotMapper | dmin/impl/AdminBotMapper.java | Maps ManagedBot to/from AdminBotResponse DTO. |
+| AdminBotRequest | dmin/dto/AdminBotRequest.java | Request DTO with 	oRegistration(usernameOverride) factory. |
+| AdminBotResponse | dmin/dto/AdminBotResponse.java | Response DTO (masks token, exposes hasToken flag). |
+
+### 4.2 Telegram Webhook Pipeline
+
+Entry: POST /telegram/webhook/{botUsername}
+
+| # | Step | Description |
+|---|---|---|
+| 1 | TelegramSecretVerificationStep | Validates X-Telegram-Bot-Api-Secret-Token header. |
+| 2 | TelegramBotLookupStep | Loads enabled bot from cache. |
+| 3 | TelegramMessageValidationStep | Validates update has a text message. |
+| 4 | TelegramCommandParsingStep | Extracts command token and arg from message text. |
+| 5 | TelegramCommandLookupStep | Matches command text to registered BotCommand beans. |
+| 6 | TelegramCommandExecutionStep | Calls BotCommand.execute(); sends reply via TelegramGateway. |
+
+### 4.3 Telegram Bot Commands
+
+All commands implement BotCommand (	elegram/command/BotCommand.java).
+
+| Command | Class | Description |
+|---|---|---|
+| /add @bot | AddCommand | Renders `GroupActivationCommandResult` from the application layer. |
+| /remove @bot | RemoveCommand | Renders `GroupActivationCommandResult` from the application layer. |
+| /status | StatusCommand | Queries isActive + ctiveGroupCount; formats status card. |
+| /id | IdCommand | Returns chatId of current group. |
+| /start | StartCommand | Greeting message. |
+| /help | HelpCommand | Lists all available commands with syntax. |
+
+### 4.4 GitHub Webhook Pipeline
+
+Entry: POST /github/webhook/{botUsername}
+
+| # | Step | Description |
+|---|---|---|
+| 1 | SignatureVerificationStep | Validates X-Hub-Signature-256 HMAC-SHA256. |
+| 2 | BotLookupStep | Loads enabled bot from cache. |
+| 3 | JsonParsingStep | Parses raw body to JsonNode. |
+| 4 | PingCheckStep | Short-circuits with PING_OK for GitHub ping events. |
+| 5 | EventPresenceStep | Validates X-GitHub-Event header presence. |
+| 6 | RepositoryMatchStep | Checks 
+epository.full_name matches bot's githubRepo. |
+| 7 | EventExecutionStep | Renders the matching event formatter and broadcasts non-empty messages. |
+
+### 4.5 GitHub Event Formatters
+
+Each formatter supports exactly one GitHub event type. `GitHubEventRenderer` selects the formatter, and `EventExecutionStep` broadcasts formatted HTML via `BroadcastUseCase`.
+
+| Event Type | Formatter | Formatter Output |
+|---|---|---|
+| push | PushEventFormatter | Branch name, commit count, committer, commit list. |
+| star | StarEventFormatter | Starred / unstarred by user. |
+| issues | IssueEventFormatter | Opened / closed / edited issue. |
+| pull_request | PullRequestEventFormatter | Opened / merged / closed PR. |
+| issue_comment | IssueCommentEventFormatter | New comment on issue or PR. |
+| workflow_run | WorkflowRunEventFormatter | CI pipeline completed (success / failure). |
+| release | ReleaseEventFormatter | Published release with tag name and release notes. |
+
+---
+
+## 5. App Layer (	elegrambots-app)
+
+| Class | Location | Description |
+|---|---|---|
+| TelegrambotsApplication | TelegrambotsApplication.java | Spring Boot entry point. |
+| UseCaseConfiguration | UseCaseConfiguration.java | Composition Root: declares all Pipeline steps and Use Cases as @Bean with @Order. |
+
+---
+
+## 6. Infrastructure Configuration
+
+### Docker Compose (docker-compose.yml)
+
+| Service | Image | Port | Description |
+|---|---|---|---|
+| 	elegrambots-app | 	elegrambots:local | 8080 | Spring Boot application. |
+| 	elegrambots-mongo | mongo:7 | 27017 | MongoDB persistent storage. |
+| 	elegrambots-ngrok | 
+grok/ngrok:latest | 4040 | Public HTTPS tunnel for local development. |
+
+### Environment Variables (.env)
+
+| Variable | Required | Purpose |
+|---|---|---|
+| MONGODB_URI | Recommended | MongoDB connection string. |
+| ADMIN_TOKEN | Production | Protects all /admin/** endpoints. |
+| PUBLIC_URL | Webhook registration | Public HTTPS domain (ngrok or production). |
+| NGROK_AUTHTOKEN | Local dev | Auth token for ngrok tunnel. |
+| PORT | Optional | HTTP port (default 8080). |
+
+---
+
+## 7. Test Coverage
+
+| Test Class | Module | Covers |
+|---|---|---|
+| ManagedBotTest | 	elegrambots-domain | create() / merge() validation rules, secret auto-generation. |
+| GroupBotActivationServiceTest | 	elegrambots-application | Reuse inactive record on re-activate; activation command result statuses. |
+| AdminAccessGuardTest | 	elegrambots-web | Token match, missing header, empty admin token disables auth. |
+| GitHubWebhookProcessorTest | 	elegrambots-web | Signature rejection, unknown bot, full happy path. |
+| AddCommandTest | 	elegrambots-web | Empty arg, wrong bot name, already active, new activation. |
+| TelegramWebhookProcessorTest | 	elegrambots-web | Bad secret, unknown bot, no text, unknown command, full flow. |
+| ManagedBotRegistryTest | 	elegrambots-infrastructure | Cache hit, DB fallback, eviction. |
+| HmacSha256SignatureVerifierTest | 	elegrambots-infrastructure | Valid signature, bad signature, empty secret bypass. |
+| TelegramWebhookManagerTest | 	elegrambots-infrastructure | Disabled bot deletes webhook, missing PUBLIC_URL skip, full register. |
+| TelegrambotsApplicationTests | 	elegrambots-app | Spring context loads successfully. |

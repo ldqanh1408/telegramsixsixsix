@@ -2,6 +2,7 @@ package com.lede.telegrambots.telegram.command.impl;
 
 import com.lede.telegrambots.telegram.command.*;
 
+import com.lede.telegrambots.application.activation.GroupActivationCommandResult;
 import com.lede.telegrambots.domain.activation.ActivationResult;
 import com.lede.telegrambots.application.port.in.BotManagementUseCase;
 import com.lede.telegrambots.domain.bot.ManagedBot;
@@ -25,7 +26,7 @@ import static org.mockito.Mockito.when;
 class AddCommandTest {
 
     private final BotManagementUseCase bots = mock(BotManagementUseCase.class);
-    private final AddCommand command = new AddCommand(bots);
+    private final AddCommand command = new AddCommand(bots, new ActivationCommandPresenter());
 
     private static ManagedBot bot() {
         return new ManagedBot(null, "my_bot", "tok", null, "owner/repo", null, true,
@@ -38,6 +39,8 @@ class AddCommandTest {
 
     @Test
     void emptyArgReturnsSyntaxHelp() {
+        when(bots.activateRequested(any(ManagedBot.class), anyLong(), any()))
+                .thenReturn(GroupActivationCommandResult.missingUsername());
         Optional<String> reply = command.execute(ctx(""));
         assertTrue(reply.isPresent());
         assertTrue(reply.get().contains("/add @my_bot"));
@@ -45,13 +48,16 @@ class AddCommandTest {
 
     @Test
     void differentBotNameStaysSilent() {
+        when(bots.activateRequested(any(ManagedBot.class), anyLong(), any()))
+                .thenReturn(GroupActivationCommandResult.botMismatch());
         Optional<String> reply = command.execute(ctx("@other_bot"));
         assertEquals(Optional.empty(), reply);
     }
 
     @Test
     void newlyActivatedConfirms() {
-        when(bots.activate(any(ManagedBot.class), anyLong())).thenReturn(new ActivationResult(null, true));
+        when(bots.activateRequested(any(ManagedBot.class), anyLong(), any()))
+                .thenReturn(GroupActivationCommandResult.activated(new ActivationResult(null, true)));
         Optional<String> reply = command.execute(ctx("@my_bot"));
         assertTrue(reply.isPresent());
         assertTrue(reply.get().contains("✅"));
@@ -59,7 +65,8 @@ class AddCommandTest {
 
     @Test
     void alreadyActiveInforms() {
-        when(bots.activate(any(ManagedBot.class), anyLong())).thenReturn(new ActivationResult(null, false));
+        when(bots.activateRequested(any(ManagedBot.class), anyLong(), any()))
+                .thenReturn(GroupActivationCommandResult.alreadyActive(new ActivationResult(null, false)));
         Optional<String> reply = command.execute(ctx("@my_bot"));
         assertTrue(reply.isPresent());
         assertTrue(reply.get().contains("ℹ️"));

@@ -1,6 +1,6 @@
 package com.lede.telegrambots.github.formatter.impl;
 
-import com.lede.telegrambots.github.formatter.*;
+import com.lede.telegrambots.github.formatter.EventFormatter;
 
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;

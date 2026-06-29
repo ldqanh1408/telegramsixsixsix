@@ -1,6 +1,4 @@
-package com.lede.telegrambots.github.impl;
-
-import com.lede.telegrambots.github.*;
+package com.lede.telegrambots.github;
 
 import com.lede.telegrambots.github.formatter.EventFormatter;
 import org.slf4j.Logger;
@@ -23,19 +21,19 @@ import java.util.stream.Collectors;
  * source-agnostic.</p>
  */
 @Component
-class GitHubEventRenderer {
+public class GitHubEventRenderer {
 
     private static final Logger log = LoggerFactory.getLogger(GitHubEventRenderer.class);
 
     private final Map<String, EventFormatter> formatters;
 
-    GitHubEventRenderer(List<EventFormatter> formatters) {
+    public GitHubEventRenderer(List<EventFormatter> formatters) {
         this.formatters = formatters.stream()
                 .collect(Collectors.toUnmodifiableMap(EventFormatter::eventName, Function.identity()));
         log.info("Registered {} event formatter(s): {}", this.formatters.size(), this.formatters.keySet());
     }
 
-    Optional<String> render(String event, JsonNode payload) {
+    public Optional<String> render(String event, JsonNode payload) {
         EventFormatter formatter = formatters.get(event);
         if (formatter == null) {
             log.debug("No formatter for event={} (ignored)", event);

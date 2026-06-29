@@ -1,7 +1,7 @@
 package com.lede.telegrambots.infrastructure.telegram;
 
-import com.lede.telegrambots.application.pipeline.Pipeline;
-import com.lede.telegrambots.application.pipeline.Step;
+import com.lede.telegrambots.domain.pipeline.Pipeline;
+import com.lede.telegrambots.domain.pipeline.Step;
 import com.lede.telegrambots.application.port.out.TelegramGateway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,16 +1,9 @@
 package com.lede.telegrambots.telegram.impl;
 
-import com.lede.telegrambots.telegram.steps.*;
-
-import com.lede.telegrambots.telegram.impl.TelegramWebhookResult.Outcome;
-
+import com.lede.telegrambots.domain.pipeline.Pipeline;
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
-
-import com.lede.telegrambots.telegram.*;
-
-import com.lede.telegrambots.application.pipeline.Pipeline;
-
 import com.lede.telegrambots.telegram.dto.Update;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookResult.Outcome;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

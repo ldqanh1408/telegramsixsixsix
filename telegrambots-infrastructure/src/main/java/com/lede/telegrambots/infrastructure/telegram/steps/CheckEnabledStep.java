@@ -1,12 +1,17 @@
 package com.lede.telegrambots.infrastructure.telegram.steps;
 
-import com.lede.telegrambots.application.pipeline.Step;
+import com.lede.telegrambots.domain.pipeline.Step;
 import com.lede.telegrambots.infrastructure.telegram.SyncSavedBotContext;
 import com.lede.telegrambots.infrastructure.telegram.TelegramClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Optional;
 
+import org.springframework.stereotype.Component;
+import org.springframework.core.annotation.Order;
+
+@Component
+@Order(1)
 public record CheckEnabledStep(TelegramClient telegramClient) implements Step<SyncSavedBotContext, Boolean> {
     private static final Logger log = LoggerFactory.getLogger(CheckEnabledStep.class);
 

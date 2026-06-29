@@ -1,13 +1,7 @@
 package com.lede.telegrambots.telegram.impl;
 
 import com.lede.telegrambots.telegram.impl.TelegramWebhookResult.Outcome;
-
-import com.lede.telegrambots.telegram.*;
-
-
 import com.lede.telegrambots.telegram.dto.Update;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/telegram/webhook")
 public class TelegramWebhookController {
 
-    private static final Logger log = LoggerFactory.getLogger(TelegramWebhookController.class);
     private static final String SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token";
 
     private final TelegramWebhookProcessor processor;

@@ -8,8 +8,8 @@ Tài liệu này giải thích cách các module trong codebase `telegrambots` �
 
 Codebase được tách thành **5 Maven module**, mỗi module là một tầng của Clean Architecture. Dependency rule (phụ thuộc hướng vào trong) được enforce **ngay bằng đồ thị Maven** — một module chỉ thấy các tầng mà `pom.xml` của nó khai báo.
 
-1. **`telegrambots-domain`** — Entities & value objects thuần (`ManagedBot`, `GroupActivation`, `BotUsername`, `MessageFormatter`, `BotDomainService`, domain events). **Không phụ thuộc gì**, không framework.
-2. **`telegrambots-application`** — Use case + port + pipeline abstraction (thuần Java). Phụ thuộc: `domain`.
+1. **`telegrambots-domain`** — Entities, value objects, shared pipeline abstraction (`ManagedBot`, `GroupActivation`, `BotUsername`, `MessageFormatter`, `Step`, `Pipeline`, domain events). **Không phụ thuộc gì**, không framework.
+2. **`telegrambots-application`** — Use case + port (thuần Java). Phụ thuộc: `domain`.
 3. **`telegrambots-infrastructure`** — Driven adapters: Mongo (document/repo/mapper), `TelegramClient` + `TelegramWebhookManager`, HMAC verifier, event publisher, bot cache. Phụ thuộc: `application`.
 4. **`telegrambots-web`** — Driving adapters: REST controller, DTO, webhook pipeline, formatter, command handler. Phụ thuộc: `application`, `domain`.
 5. **`telegrambots-app`** — Spring Boot bootstrap + composition root (wire use case thuần thành `@Bean`). Phụ thuộc: `web`, `infrastructure`.

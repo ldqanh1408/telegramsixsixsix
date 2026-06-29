@@ -1,10 +1,8 @@
 package com.lede.telegrambots.github.impl;
 
+import com.lede.telegrambots.domain.pipeline.Pipeline;
+import com.lede.telegrambots.github.GitHubWebhookResult;
 import com.lede.telegrambots.github.GitHubWebhookStep;
-
-import com.lede.telegrambots.github.*;
-
-import com.lede.telegrambots.application.pipeline.Pipeline;
 import com.lede.telegrambots.github.GitHubWebhookResult.Outcome;
 import org.springframework.stereotype.Service;
 
