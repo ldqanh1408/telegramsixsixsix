@@ -1,6 +1,6 @@
 package com.lede.telegrambots.admin.dto;
 
-import com.lede.telegrambots.bot.BotRegistration;
+import com.lede.telegrambots.domain.bot.BotRegistration;
 
 public record AdminBotRequest(
         String username,

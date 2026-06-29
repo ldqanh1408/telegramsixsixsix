@@ -1,8 +1,6 @@
 /**
- * Telegram integration: webhook controller, {@code TelegramSender} port + {@code TelegramClient}
- * adapter, command router and pure command handlers.
+ * Telegram integration: webhook controller and the webhook pipeline (built on the shared
+ * {@code application.pipeline} abstraction), command router and pure command handlers. Sends
+ * replies through the application's {@code TelegramGateway} port.
  */
-@org.springframework.modulith.ApplicationModule(
-        displayName = "Telegram",
-        allowedDependencies = {"bot", "activation", "shared", "mongo"})
 package com.lede.telegrambots.telegram;

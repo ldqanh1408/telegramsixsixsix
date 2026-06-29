@@ -1,6 +1,6 @@
 package com.lede.telegrambots.telegram.command;
 
-import com.lede.telegrambots.mongo.entity.ManagedBot;
+import com.lede.telegrambots.domain.bot.ManagedBot;
 
 /**
  * Immutable input for a {@link BotCommand} execution.

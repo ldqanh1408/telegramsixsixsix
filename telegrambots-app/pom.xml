@@ -12,51 +12,27 @@
 
     <artifactId>telegrambots-app</artifactId>
     <name>telegrambots-app</name>
-    <description>Main Spring Boot runner and orchestration app</description>
+    <description>Spring Boot bootstrap: composes the layers and wires the pure use cases as beans</description>
 
+    <!--
+      Outermost layer. Depends on the driving (web) and driven (infrastructure) adapters, which
+      transitively bring application + domain. This is the only module that knows every layer, so
+      it is where the pure use cases are assembled into Spring beans.
+    -->
     <dependencies>
-        <!-- Internal Modules -->
-        <dependency>
-            <groupId>com.lede</groupId>
-            <artifactId>telegrambots-core</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.lede</groupId>
             <artifactId>telegrambots-web</artifactId>
         </dependency>
-
-        <!-- Spring Boot Starters -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-mongodb</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.modulith</groupId>
-            <artifactId>spring-modulith-starter-core</artifactId>
+            <groupId>com.lede</groupId>
+            <artifactId>telegrambots-infrastructure</artifactId>
         </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.modulith</groupId>
-            <artifactId>spring-modulith-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.modulith</groupId>
-            <artifactId>spring-modulith-docs</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

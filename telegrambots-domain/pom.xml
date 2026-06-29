@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.lede</groupId>
+        <artifactId>telegrambots</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>telegrambots-domain</artifactId>
+    <name>telegrambots-domain</name>
+    <description>Enterprise business rules: entities, value objects, domain services (pure Java)</description>
+
+    <!--
+      Innermost layer of the onion. Intentionally has NO production dependencies — not even
+      Spring. Anything here must be expressible in plain Java so the business model stays
+      framework-agnostic and trivially testable.
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -7,9 +7,9 @@ package com.lede.telegrambots.github;
  * touches Spring MVC types; {@code GitHubWebhookController} alone maps {@link Outcome}
  * to an HTTP status. This keeps the processing rules decoupled from the web framework.</p>
  */
-record GitHubWebhookResult(Outcome outcome, String body) {
+public record GitHubWebhookResult(Outcome outcome, String body) {
 
-    enum Outcome {
+    public enum Outcome {
         UNKNOWN_BOT,
         BAD_SIGNATURE,
         MISSING_EVENT,
@@ -19,7 +19,7 @@ record GitHubWebhookResult(Outcome outcome, String body) {
         OK
     }
 
-    static GitHubWebhookResult of(Outcome outcome, String body) {
+    public static GitHubWebhookResult of(Outcome outcome, String body) {
         return new GitHubWebhookResult(outcome, body);
     }
 }

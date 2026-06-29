@@ -9,6 +9,7 @@ Bots are managed dynamically via Admin REST API — no per-bot env config.
 ## Tech stack
 
 - Java 21, Spring Boot 4.1.0, Maven (wrapper: `./mvnw`)
+- **Clean Architecture (Onion)** as a Maven multi-module reactor: `telegrambots-domain` → `telegrambots-application` → `telegrambots-infrastructure` / `telegrambots-web` → `telegrambots-app`
 - MongoDB (Spring Data MongoDB) — collections: `managed_bots`, `group_activations`
 - Jackson 3 (`tools.jackson.databind`) — NOT `com.fasterxml.jackson`
 - RestClient (Spring 6) for Telegram Bot API calls
@@ -43,36 +44,33 @@ All config is via environment variables — no per-bot env vars.
 | `ADMIN_TOKEN` | yes (production) | empty (disables admin API) | Guards `/admin/**` endpoints |
 | `PORT` | no | `8080` | HTTP server port |
 
-Config binding: `application.yaml` → `AppProperties` record (`@ConfigurationProperties(prefix = "app")`).
+Config binding: `application.yaml` values are injected where needed via `@Value` in the web/infrastructure adapters (e.g. `app.admin.token` → `AdminAccessGuard`, `app.public-url` → `TelegramWebhookManager`).
 
 ## Architecture
 
 ### Package structure
 
-Each direct sub-package is a **Spring Modulith Application Module**; boundaries are declared in each `package-info.java` and enforced by `ModularityTests`. See [docs/architecture/modules.md](docs/architecture/modules.md).
+Clean Architecture (Onion). Each layer is a **Maven module**; the dependency rule is enforced by the Maven reactor graph (a module only sees the layers its `pom.xml` declares). See [docs/architecture/modules.md](docs/architecture/modules.md).
 
-| Package (module) | Responsibility | allowedDependencies |
-|---|---|---|
-| `shared` | Shared kernel: `BotUsername`, `MessageFormatter` | — |
-| `config` | `AppProperties` configuration record | — |
-| `mongo` *(OPEN)* | Entity records and Spring Data repositories | — |
-| `activation` | Group activation/deactivation (`GroupBotActivationService`, `ActivationResult`); persistence port `ActivationStore` + adapter `MongoActivationStore` | `shared`, `mongo` |
-| `bot` | Use-case port (`BotManagementUseCase`), facade (`DynamicBotManager`), registry (`ManagedBotRegistry`), command (`BotRegistration`); persistence port `BotStore` + adapter `MongoBotStore` | `activation`, `shared`, `mongo` |
-| `admin` | REST API for bot CRUD (`AdminBotController`), guard, service, mapper, DTOs | `bot`, `config`, `mongo` |
-| `telegram` | Webhook controller, `TelegramClient` adapter (implements `TelegramSender` from `shared`), `CommandRouter`, pure command handlers | `bot`, `activation`, `shared`, `mongo` |
-| `notification` | `NotificationService` — source-agnostic broadcaster (fan out HTML to active groups) | `bot`, `mongo`, `shared` |
-| `github` | Thin webhook controller, `GitHubWebhookProcessor` (pipeline), `GitHubEventRenderer` (formatters), `WebhookSignatureVerifier` port + `HmacSha256SignatureVerifier`, `GitHubWebhookResult` | `bot`, `notification`, `shared`, `mongo` |
+| Maven module | Root package | Responsibility | Depends on |
+|---|---|---|---|
+| `telegrambots-domain` | `…domain.*` | Pure entities/value objects/domain service: `ManagedBot`, `GroupActivation`, `ActivationResult`, `BotRegistration`, `BotUsername`, `MessageFormatter`, `BotDomainService`, `Bot*Event`. No framework. | — |
+| `telegrambots-application` | `…application.*` | Use cases + ports + pipeline abstraction (pure Java). Inbound port `BotManagementUseCase` (facade `DynamicBotManager`); use cases `UpsertBotUseCase`/`DeleteBotUseCase` (pipeline), `BotQueryService`, `GroupBotActivationService`, `BroadcastUseCase`; outbound ports `BotRepository`, `ActivationRepository`, `BotCache`, `TelegramGateway`, `WebhookSignatureVerifier`, `DomainEventPublisher`; `pipeline.Step`/`pipeline.Pipeline`. | `domain` |
+| `telegrambots-infrastructure` | `…infrastructure.*` | Driven adapters: Mongo (`*Document`, Spring Data repos, `*Mapper`, `Mongo*Repository`), `ManagedBotRegistry` (cache), `TelegramClient` + `TelegramWebhookManager`, `HmacSha256SignatureVerifier`, `SpringDomainEventPublisher`. | `application` |
+| `telegrambots-web` | `…admin` / `…github` / `…telegram` | Driving adapters: REST controllers, DTOs, webhook pipelines (`*Step`/`*Processor`/`*Context`/`*Result`), `GitHubEventRenderer` + formatters, pure command handlers. | `application`, `domain` |
+| `telegrambots-app` | `…telegrambots` | Spring Boot bootstrap + composition root (`UseCaseConfiguration` wires the pure use cases as `@Bean`). | `web`, `infrastructure` |
 
 ### Key patterns
 
-- **Facade**: `DynamicBotManager` implements `BotManagementUseCase`, coordinates registry + activation
+- **Clean Architecture (Onion)**: dependency rule points inward; `domain` and `application` are framework-free, enforced by the Maven module graph (no `web`↔`infrastructure` dependency). No Spring Modulith.
+- **Pipeline (shared)**: `application.pipeline.Step<C,R>` + `Pipeline<C,R>` back **both** webhook processing (`GitHubWebhookStep`/`TelegramWebhookStep` are typed aliases) **and** write use cases (`UpsertBotUseCase`, `DeleteBotUseCase` are pipelines of named stages)
+- **Facade**: `DynamicBotManager` implements `BotManagementUseCase`, routing to the focused use cases
 - **Strategy**: `EventFormatter` interface — each GitHub event type has its own formatter bean
-- **Command (pure)**: `BotCommand.execute()` returns `Optional<String>` (the reply); `CommandRouter` is the only sender. Commands have zero transport coupling
-- **Ports & Adapters (DIP)**: `TelegramSender` (impl `TelegramClient`) and `WebhookSignatureVerifier` (impl `HmacSha256SignatureVerifier`) — callers depend on interfaces, not infra
-- **Persistence ports**: business services depend on hand-written store interfaces (`BotStore`, `ActivationStore`), not Spring Data repos. Mongo adapters (`MongoBotStore`, `MongoActivationStore`, `@Component`) are the only classes touching `*Repository` — keeps domain logic free of DB details and mockable without a database
+- **Command (pure)**: `BotCommand.execute()` returns `Optional<String>` (the reply); the command-execution step is the only sender. Commands have zero transport coupling
+- **Ports & Adapters (DIP)**: outbound ports in `application.port.out` (`BotRepository`, `ActivationRepository`, `BotCache`, `TelegramGateway`, `WebhookSignatureVerifier`, `DomainEventPublisher`) implemented by `infrastructure.*` `@Component`s
+- **Entity ↔ Document split**: domain records are persistence-free; `infrastructure.persistence.mongo` holds the `@Document` twins + `*Mapper`
 - **Application Service + Result Object**: `GitHubWebhookProcessor` owns the webhook pipeline and returns web-agnostic `GitHubWebhookResult`; the controller only maps it to HTTP
-- **Modular monolith (Spring Modulith)**: 9 modules with enforced, acyclic boundaries (`@ApplicationModule(allowedDependencies=…)` in `package-info.java`); `mongo` is OPEN. `verify()` runs in `ModularityTests`
-- **Registry**: `ManagedBotRegistry` loads enabled bots into `ConcurrentHashMap` at startup, updates on CRUD
+- **Registry**: `ManagedBotRegistry` (infra, impl of `BotCache`) loads enabled bots into `ConcurrentHashMap` at startup, updated by the bot use cases
 - **Value Object**: `BotUsername` normalizes `@Bot` → `bot` (lowercase, strip @)
 - **Guard**: `AdminAccessGuard` uses constant-time comparison for admin token
 
@@ -84,14 +82,14 @@ GitHub repo event
   → GitHubWebhookProcessor: WebhookSignatureVerifier (HMAC-SHA256)
   → repo match check
   → GitHubEventRenderer.render() → EventFormatter.format() → HTML message
-  → NotificationService.broadcast() → fan out to all active groups via TelegramSender
+  → BroadcastUseCase.broadcast() → fan out to all active groups via TelegramGateway
 ```
 
 ```
 Telegram user command
   → POST /telegram/webhook/{botUsername}
   → secret token check
-  → CommandRouter.handle()
+  → TelegramWebhookProcessor pipeline (lookup → secret → validate → parse → lookup cmd → execute)
   → BotCommand.execute(CommandContext)
 ```
 
@@ -150,21 +148,27 @@ Telegram user command
 ## Security notes
 
 - Admin token compared with `MessageDigest.isEqual()` (constant-time)
-- GitHub signatures verified with HMAC-SHA256 (`SignatureVerifier`)
+- GitHub signatures verified with HMAC-SHA256 (`WebhookSignatureVerifier` port → `HmacSha256SignatureVerifier`)
 - Telegram webhook secret checked per-bot
 - Admin API response never exposes raw tokens — uses `hasToken` boolean flags
 - If `ADMIN_TOKEN` is empty, entire admin API returns 404
 
 ## Adding a new Telegram command
 
-1. Create a `@Component` class implementing `BotCommand`
+1. In `telegrambots-web`, create a `@Component` class in `telegram.command` implementing `BotCommand`
 2. Return command name (e.g., `/mycommand`) from `name()`
-3. Implement `execute(CommandContext ctx)` — return `Optional<String>` (the HTML reply, or `Optional.empty()` to stay silent). Do NOT inject `TelegramClient`/`TelegramSender`; the router sends
-4. CommandRouter auto-discovers it via Spring DI
+3. Implement `execute(CommandContext ctx)` — return `Optional<String>` (the HTML reply, or `Optional.empty()` to stay silent). Do NOT inject any sender; `TelegramCommandExecutionStep` performs the single send
+4. `TelegramCommandLookupStep` auto-discovers it via the injected `List<BotCommand>`
 
 ## Adding a new GitHub event formatter
 
-1. Create a `@Component` class implementing `EventFormatter`
+1. In `telegrambots-web`, create a `@Component` class in `github.formatter` implementing `EventFormatter`
 2. Return event name (e.g., `"deployment"`) from `eventName()`
 3. Implement `format(JsonNode payload)` — return `Optional.empty()` to drop
-4. NotificationService auto-discovers it via Spring DI
+4. `GitHubEventRenderer` auto-discovers it via the injected `List<EventFormatter>` (wire a matching `github.handler.GitHubEventHandler` if the event needs broadcasting)
+
+## Adding a new outbound dependency (DB/HTTP/etc.)
+
+1. Declare an outbound port in `telegrambots-application` (`application.port.out`)
+2. Implement it as a `@Component` adapter in `telegrambots-infrastructure`
+3. Use cases depend only on the port; never let `domain`/`application` import Spring/Mongo/Jackson

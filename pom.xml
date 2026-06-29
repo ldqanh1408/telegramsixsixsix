@@ -13,32 +13,50 @@
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>telegrambots</name>
-    <description>Multi-bot GitHub repo notifier for Telegram groups (MongoDB-backed) - Multi-Module parent</description>
-    
+    <description>Multi-bot GitHub repo notifier for Telegram groups (MongoDB-backed) - Clean Architecture parent</description>
+
+    <!--
+      Clean Architecture (Onion) — Maven module per layer. The dependency rule is enforced by
+      the reactor graph itself: each pom only declares the layers it is allowed to see.
+
+          domain  ←  application  ←  infrastructure
+                              ↖          web          ↙
+                                       app (wires everything)
+
+      - domain          : enterprise entities + value objects (pure Java, no framework)
+      - application      : use cases, ports, pipeline abstraction (pure Java, depends on domain)
+      - infrastructure   : Mongo/Telegram/security adapters implementing the ports (depends on application)
+      - web              : controllers, DTOs, webhook pipelines (depends on application)
+      - app              : Spring Boot bootstrap + bean wiring (depends on web + infrastructure)
+    -->
     <modules>
-        <module>telegrambots-core</module>
+        <module>telegrambots-domain</module>
+        <module>telegrambots-application</module>
+        <module>telegrambots-infrastructure</module>
         <module>telegrambots-web</module>
         <module>telegrambots-app</module>
     </modules>
 
     <properties>
         <java.version>21</java.version>
-        <spring-modulith.version>2.1.0</spring-modulith.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.modulith</groupId>
-                <artifactId>spring-modulith-bom</artifactId>
-                <version>${spring-modulith.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <!-- Internal Modules -->
             <dependency>
                 <groupId>com.lede</groupId>
-                <artifactId>telegrambots-core</artifactId>
+                <artifactId>telegrambots-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.lede</groupId>
+                <artifactId>telegrambots-application</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.lede</groupId>
+                <artifactId>telegrambots-infrastructure</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

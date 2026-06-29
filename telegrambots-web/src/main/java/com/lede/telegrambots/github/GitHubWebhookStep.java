@@ -1,19 +1,16 @@
 package com.lede.telegrambots.github;
 
-import java.util.Optional;
+import com.lede.telegrambots.github.impl.GitHubWebhookContext;
+
+
+import com.lede.telegrambots.github.*;
+
+import com.lede.telegrambots.application.pipeline.Step;
 
 /**
- * Functional interface for a single step in the GitHub webhook processing pipeline.
+ * A single stage of the GitHub webhook pipeline. A typed alias over the shared
+ * {@link Step} abstraction so the github steps form a distinct, generic-aware bean group
+ * that Spring can inject as a {@code List<GitHubWebhookStep>}.
  */
-@FunctionalInterface
-interface GitHubWebhookStep {
-
-    /**
-     * Executes the step's logic.
-     *
-     * @param context the context holding input parameters and intermediate/shared data
-     * @return Optional containing the result if the step wishes to short-circuit the pipeline,
-     *         or Optional.empty() if it wishes to proceed to the next step
-     */
-    Optional<GitHubWebhookResult> execute(GitHubWebhookContext context);
+public interface GitHubWebhookStep extends Step<GitHubWebhookContext, GitHubWebhookResult> {
 }

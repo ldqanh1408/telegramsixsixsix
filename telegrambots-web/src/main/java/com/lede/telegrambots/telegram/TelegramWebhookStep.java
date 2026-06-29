@@ -1,19 +1,16 @@
 package com.lede.telegrambots.telegram;
 
-import java.util.Optional;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
+
+import com.lede.telegrambots.telegram.*;
+
+import com.lede.telegrambots.application.pipeline.Step;
 
 /**
- * Functional interface for a single step in the Telegram webhook processing pipeline.
+ * A single stage of the Telegram webhook pipeline. A typed alias over the shared
+ * {@link Step} abstraction so the telegram steps form a distinct, generic-aware bean group
+ * that Spring can inject as a {@code List<TelegramWebhookStep>}.
  */
-@FunctionalInterface
-interface TelegramWebhookStep {
-
-    /**
-     * Executes the step's logic.
-     *
-     * @param context the context holding input parameters and intermediate/shared data
-     * @return Optional containing the result if the step wishes to short-circuit the pipeline,
-     *         or Optional.empty() if it wishes to proceed to the next step
-     */
-    Optional<TelegramWebhookResult> execute(TelegramWebhookContext context);
+public interface TelegramWebhookStep extends Step<TelegramWebhookContext, TelegramWebhookResult> {
 }

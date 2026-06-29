@@ -1,7 +1,5 @@
 /**
- * Admin REST API for bot CRUD, guarded by a constant-time admin token.
+ * Admin REST API for bot CRUD, guarded by a constant-time admin token. Driving adapter that
+ * delegates to the application's {@code BotManagementUseCase}.
  */
-@org.springframework.modulith.ApplicationModule(
-        displayName = "Admin API",
-        allowedDependencies = {"bot", "config", "mongo"})
 package com.lede.telegrambots.admin;

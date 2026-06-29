@@ -2,7 +2,9 @@ FROM maven:3.9.9-eclipse-temurin-21 AS build
 
 WORKDIR /workspace
 COPY pom.xml .
-COPY telegrambots-core ./telegrambots-core
+COPY telegrambots-domain ./telegrambots-domain
+COPY telegrambots-application ./telegrambots-application
+COPY telegrambots-infrastructure ./telegrambots-infrastructure
 COPY telegrambots-web ./telegrambots-web
 COPY telegrambots-app ./telegrambots-app
 

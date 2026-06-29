@@ -1,6 +1,6 @@
 package com.lede.telegrambots.github.handler;
 
-import com.lede.telegrambots.mongo.entity.ManagedBot;
+import com.lede.telegrambots.domain.bot.ManagedBot;
 import tools.jackson.databind.JsonNode;
 
 /**

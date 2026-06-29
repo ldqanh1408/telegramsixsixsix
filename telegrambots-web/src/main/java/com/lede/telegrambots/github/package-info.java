@@ -1,9 +1,6 @@
 /**
- * GitHub integration: thin webhook controller, the webhook pipeline ({@code GitHubWebhookProcessor}),
- * HMAC-SHA256 signature verification, and event rendering (formatters). Hands rendered messages to
- * the {@code notification} module to broadcast.
+ * GitHub integration: thin webhook controller, the webhook pipeline ({@code GitHubWebhookProcessor}
+ * built on the shared {@code application.pipeline} abstraction), and event rendering (formatters).
+ * Hands rendered messages to the application's {@code BroadcastUseCase}.
  */
-@org.springframework.modulith.ApplicationModule(
-        displayName = "GitHub",
-        allowedDependencies = {"bot", "notification", "shared", "mongo"})
 package com.lede.telegrambots.github;
