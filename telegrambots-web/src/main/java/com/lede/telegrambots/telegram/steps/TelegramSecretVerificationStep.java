@@ -1,4 +1,8 @@
-package com.lede.telegrambots.telegram.impl;
+package com.lede.telegrambots.telegram.steps;
+
+import com.lede.telegrambots.telegram.TelegramWebhookStep;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
 
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
 
@@ -13,7 +17,7 @@ import java.util.Optional;
 
 @Component
 @Order(2)
-class TelegramSecretVerificationStep implements TelegramWebhookStep {
+public class TelegramSecretVerificationStep implements TelegramWebhookStep {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramSecretVerificationStep.class);
 

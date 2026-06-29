@@ -1,4 +1,8 @@
-package com.lede.telegrambots.telegram.impl;
+package com.lede.telegrambots.telegram.steps;
+
+import com.lede.telegrambots.telegram.TelegramWebhookStep;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
 
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
 
@@ -15,7 +19,7 @@ import java.util.Optional;
 
 @Component
 @Order(6)
-class TelegramCommandExecutionStep implements TelegramWebhookStep {
+public class TelegramCommandExecutionStep implements TelegramWebhookStep {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramCommandExecutionStep.class);
     private final TelegramGateway sender;

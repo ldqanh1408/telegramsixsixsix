@@ -114,7 +114,7 @@ Luồng webhook ở đây dùng **MongoDB không bọc transaction** → `@Trans
 ## 5. (Tùy chọn) Hardening thêm
 
 - **Gửi song song có giới hạn** trong `broadcast`: thay `for` tuần tự bằng fan-out qua executor bị chặn (5–10 luồng) → giảm tổng thời gian từ `N×rtt` xuống ~`rtt`.
-- **Xử lý 429** trong [TelegramClient](../../telegrambots-telegram/src/main/java/com/lede/telegrambots/telegram/TelegramClient.java): đọc `retry_after`, retry có backoff; throttle ~30 msg/s/bot (hiện đang nuốt lỗi → mất tin).
+- **Xử lý 429** trong [TelegramClient](../../telegrambots-infrastructure/src/main/java/com/lede/telegrambots/infrastructure/telegram/TelegramClient.java): đọc `retry_after`, retry có backoff; throttle ~30 msg/s/bot (hiện đang nuốt lỗi → mất tin).
 - **Event bền vững (at-least-once)**: thêm `spring-modulith-starter-mongodb` để lưu event publication vào Mongo (outbox) → không mất thông báo khi app restart giữa chừng. Cần dùng phương án B + transaction.
 
 ---

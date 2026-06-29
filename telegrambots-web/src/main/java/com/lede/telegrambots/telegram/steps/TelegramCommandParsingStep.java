@@ -1,4 +1,8 @@
-package com.lede.telegrambots.telegram.impl;
+package com.lede.telegrambots.telegram.steps;
+
+import com.lede.telegrambots.telegram.TelegramWebhookStep;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
+import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
 
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
 
@@ -11,7 +15,7 @@ import java.util.Optional;
 
 @Component
 @Order(4)
-class TelegramCommandParsingStep implements TelegramWebhookStep {
+public class TelegramCommandParsingStep implements TelegramWebhookStep {
 
     @Override
     public Optional<TelegramWebhookResult> execute(TelegramWebhookContext context) {

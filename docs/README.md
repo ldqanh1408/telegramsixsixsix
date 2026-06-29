@@ -21,7 +21,7 @@ Tài liệu được sắp theo **mục tiêu của bạn**. Chọn nhánh phù 
 
 ### 3. Tôi muốn hiểu kiến trúc / sửa code
 1. [architecture/overview.md](architecture/overview.md) — package, design pattern, luồng dữ liệu, schema
-2. [architecture/modules.md](architecture/modules.md) — module hóa (Spring Modulith), biên giới enforce
+2. [architecture/modules.md](architecture/modules.md) — cấu trúc module hóa Maven, phân tách package sạch (Onion)
 3. [architecture/decoupling.md](architecture/decoupling.md) — các refactor hạ coupling (DIP, Ports & Adapters)
 4. [architecture/admin-api.md](architecture/admin-api.md) — Admin API deep-dive + flow `/add @bot`
 5. [architecture/async-broadcast-proposal.md](architecture/async-broadcast-proposal.md) — *(đề xuất)* tách broadcast sang async event để bỏ bottleneck

@@ -36,7 +36,7 @@ After:
   StartCommand/HelpCommand/IdCommand  ──▶ (không phụ thuộc gì)
   AddCommand/RemoveCommand/StatusCommand ──▶ BotManagementUseCase (domain port)
 
-  CommandRouter ──▶ TelegramSender (port)
+  CommandRouter ──▶ TelegramGateway (port)
 ```
 
 **Kết quả**:
@@ -44,15 +44,15 @@ After:
 - Command còn lại chỉ phụ thuộc domain port `BotManagementUseCase` (hợp lý)
 - Test command không cần mock transport (xem `AddCommandTest`)
 
-### 2. Outbound port `TelegramSender`
+### 2. Outbound port `TelegramGateway`
 
 **Vấn đề**: `NotificationService` và `CommandRouter` bind cứng vào `TelegramClient`.
 
-**Giải pháp**: thêm interface `TelegramSender` (port). `TelegramClient` `implements TelegramSender` (adapter). Callers phụ thuộc port.
+**Giải pháp**: thêm interface `TelegramGateway` (port). `TelegramClient` `implements TelegramGateway` (adapter). Callers phụ thuộc port.
 
 ```
 NotificationService ─┐
-                     ├──▶ TelegramSender (interface) ◀── TelegramClient (adapter)
+                     ├──▶ TelegramGateway (interface) ◀── TelegramClient (adapter)
 CommandRouter       ─┘
 ```
 
@@ -104,8 +104,8 @@ After:
 |---|---|---|
 | `StartCommand` / `HelpCommand` / `IdCommand` | `TelegramClient` | — (không) |
 | `AddCommand` / `RemoveCommand` / `StatusCommand` | `TelegramClient`, `BotManagementUseCase` | `BotManagementUseCase` |
-| `CommandRouter` | `TelegramClient` (gián tiếp qua command) | `TelegramSender` (port) |
-| `NotificationService` | `TelegramClient` | `TelegramSender` (port) |
+| `CommandRouter` | `TelegramClient` (gián tiếp qua command) | `TelegramGateway` (port) |
+| `NotificationService` | `TelegramClient` | `TelegramGateway` (port) |
 | `GitHubWebhookController` | 4 collaborator + static verifier + MVC | `GitHubWebhookProcessor` (+ MVC) |
 | `GitHubWebhookProcessor` (mới) | — | abstraction (`BotManagementUseCase`, `WebhookSignatureVerifier`) |
 
@@ -115,7 +115,7 @@ After:
 
 | Pattern | Áp dụng |
 |---|---|
-| **Dependency Inversion Principle** | `TelegramSender`, `WebhookSignatureVerifier` ports |
+| **Dependency Inversion Principle** | `TelegramGateway`, `WebhookSignatureVerifier` ports |
 | **Ports & Adapters (Hexagonal)** | `TelegramClient`/`HmacSha256SignatureVerifier` là adapter của port |
 | **Command (pure / return-value)** | `BotCommand.execute()` trả reply thay vì gửi |
 | **Application Service** | `GitHubWebhookProcessor` |

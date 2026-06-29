@@ -151,7 +151,7 @@ classDiagram
     AdminBotService --> AdminBotMapper : uses
 
     %% --- Telegram Module ---
-    class TelegramSender {
+    class TelegramGateway {
         <<interface>>
         +sendHtml(String token, long chatId, String html) void
     }
@@ -159,7 +159,7 @@ classDiagram
     class TelegramClient {
         -RestClient restClient
     }
-    TelegramClient ..|> TelegramSender : implements
+    TelegramClient ..|> TelegramGateway : implements
 
     class TelegramWebhookController {
         -BotManagementUseCase botManager
@@ -196,7 +196,7 @@ classDiagram
         +execute() Optional
     }
     class TelegramCommandExecutionStep {
-        -TelegramSender sender
+        -TelegramGateway sender
         +execute() Optional
     }
     TelegramSecretVerificationStep ..|> TelegramWebhookStep
@@ -205,7 +205,7 @@ classDiagram
     TelegramMessageValidationStep ..|> TelegramWebhookStep
     TelegramCommandLookupStep ..|> TelegramWebhookStep
     TelegramCommandExecutionStep ..|> TelegramWebhookStep
-    TelegramCommandExecutionStep --> TelegramSender : sends
+    TelegramCommandExecutionStep --> TelegramGateway : sends
     
     class BotCommand {
         <<interface>>
@@ -247,11 +247,11 @@ classDiagram
 
     %% --- Notification Module ---
     class NotificationService {
-        -TelegramSender sender
+        -TelegramGateway sender
         -GroupActivationRepository activations
         +broadcast(String botUsername, String htmlMessage) void
     }
-    NotificationService --> TelegramSender : uses
+    NotificationService --> TelegramGateway : uses
     NotificationService --> GroupActivationRepository : scans
 
     %% --- GitHub Module ---
@@ -354,70 +354,37 @@ classDiagram
 
 ## 2. UML Component Diagram (Sơ đồ Thành phần)
 
-Sơ đồ thành phần thể hiện ranh giới 10 submodules Maven của dự án và các mối quan hệ phụ thuộc lẫn nhau khi biên dịch:
+Sơ đồ thành phần thể hiện ranh giới **5 submodules Maven** theo mô hình **Clean Architecture (Onion / Hexagonal)** và chiều phụ thuộc luôn hướng vào lõi:
 
 ```mermaid
 graph TD
-    subgraph AppRunner["telegrambots-app (Executable JAR)"]
-        app[Runner Entry Point]
+    subgraph AppRunner["telegrambots-app (Composition Root)"]
+        app[Runner / Bootstrapping & Wiring]
     end
 
-    subgraph FeatureModules["Feature Modules"]
-        admin[telegrambots-admin]
-        github[telegrambots-github]
-        telegram[telegrambots-telegram]
-        notification[telegrambots-notification]
+    subgraph Adapters["Adapters (Driving & Driven)"]
+        web[telegrambots-web · Driving Adapters / Entry Points]
+        infra[telegrambots-infrastructure · Driven Adapters / Technology]
     end
 
-    subgraph CoreBusiness["Core Business Domain"]
-        bot[telegrambots-bot]
-        activation[telegrambots-activation]
-    end
-
-    subgraph InfraPersistence["Infrastructure & Persistence"]
-        mongo[telegrambots-mongo]
-        config[telegrambots-config]
-    end
-
-    subgraph SharedKernel["Shared Kernel"]
-        shared[telegrambots-shared]
+    subgraph CoreBusiness["Core Logic (Pure Java)"]
+        application[telegrambots-application · Use Cases + Ports]
+        domain[telegrambots-domain · Pure Domain Entities]
     end
 
     %% Dependency lines
-    app --> admin
-    app --> github
-    app --> telegram
-    app --> notification
-    app --> bot
-    app --> activation
-    app --> mongo
-    app --> config
-    app --> shared
+    app --> web
+    app --> infra
+    app --> application
+    app --> domain
 
-    admin --> bot
-    admin --> mongo
-    admin --> config
+    web --> application
+    web --> domain
 
-    github --> bot
-    github --> notification
-    github --> shared
-    github --> mongo
+    infra --> application
+    infra --> domain
 
-    telegram --> bot
-    telegram --> activation
-    telegram --> shared
-    telegram --> mongo
-
-    notification --> bot
-    notification --> telegram
-    notification --> mongo
-
-    bot --> activation
-    bot --> shared
-    bot --> mongo
-
-    activation --> shared
-    activation --> mongo
+    application --> domain
 ```
 
 ---
@@ -442,7 +409,7 @@ sequenceDiagram
     participant CEStep as TelegramCommandExecutionStep
     participant Command as AddCommand / BotCommand
     participant UC as BotManagementUseCase
-    participant Sender as TelegramSender (Port)
+    participant Sender as TelegramGateway (Port)
     participant Client as TelegramClient (Adapter)
 
     TG->>Controller: POST /telegram/webhook/{botUsername}<br/>Header: X-Telegram-Bot-Api-Secret-Token
@@ -505,7 +472,7 @@ sequenceDiagram
     participant EEStep as EventExecutionStep
     participant Formatter as PushEventFormatter / EventFormatter
     participant Notifier as NotificationService
-    participant Sender as TelegramSender
+    participant Sender as TelegramGateway
 
     GH->>Controller: POST /github/webhook/{botUsername}<br/>Header: X-Hub-Signature-256
     Controller->>Processor: process(botUsername, rawBody, signature, eventName)

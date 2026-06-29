@@ -36,112 +36,63 @@ Tài liệu này giải thích toàn bộ kiến trúc, luồng dữ liệu, des
 
 ## 3. Cấu trúc package & Maven Modules
 
-Dự án được chia thành 10 Maven submodules riêng biệt để phân chia ranh giới nghiệp vụ của Spring Modulith ở cả cấp độ mã nguồn:
+Dự án được phân chia thành **5 Maven modules** theo mô hình **Clean Architecture (Onion)** hướng Ports & Adapters:
 
 ```
 telegrambots/
 ├── pom.xml                                   # Parent POM
 ├── Dockerfile                                # Multi-stage Docker build
 ├── docker-compose.yml                        # Docker Compose setup (App, Mongo, Ngrok)
+├── .env                                      # File config môi trường (không commit)
 │
-├── telegrambots-shared/                      # Module: shared
-│   └── src/main/java/com/lede/telegrambots/shared/
-│       ├── BotUsername.java                  # Value object (normalize username)
-│       └── MessageFormatter.java             # HTML escape utilities
+├── telegrambots-domain/                      # Nghiệp vụ lõi (Java thuần, không framework)
+│   └── src/main/java/com/lede/telegrambots/domain/
+│       ├── bot/                              # Entities: ManagedBot, BotSavedEvent
+│       ├── activation/                       # Entities: GroupActivation, ActivationResult
+│       └── shared/                           # Value objects: BotUsername, MessageFormatter
 │
-├── telegrambots-config/                      # Module: config
-│   └── src/main/java/com/lede/telegrambots/config/
-│       └── AppProperties.java                # @ConfigurationProperties(prefix = "app")
+├── telegrambots-application/                 # Use Cases & Ports (Java thuần, không framework)
+│   └── src/main/java/com/lede/telegrambots/application/
+│       ├── bot/                              # UpsertBotUseCase, DeleteBotUseCase, DynamicBotManager
+│       │   └── steps/                        # Các bước pipeline của Bot UseCases
+│       ├── activation/                       # GroupBotActivationService
+│       │   └── steps/                        # Các bước pipeline của Activation Service
+│       ├── notification/                     # BroadcastUseCase (gửi thông báo đa hướng)
+│       │   └── steps/                        # Các bước pipeline của Broadcast
+│       ├── pipeline/                         # Pipeline & Step generic abstractions
+│       └── port/                             # Inbound & Outbound Ports interfaces
+│           ├── in/                           # BotManagementUseCase facade
+│           └── out/                          # Repositories, Gateway, Cache, EventPublisher ports
 │
-├── telegrambots-mongo/                       # Module: mongo (OPEN)
-│   └── src/main/java/com/lede/telegrambots/mongo/
-│       ├── entity/
-│       │   ├── ManagedBot.java               # managed_bots document
-│       │   └── GroupActivation.java          # group_activations document
-│       └── repo/
-│           ├── ManagedBotRepository.java
-│           └── GroupActivationRepository.java
+├── telegrambots-infrastructure/              # Driven Adapters (Thực thi chi tiết công nghệ: DB, HTTP client, Event)
+│   └── src/main/java/com/lede/telegrambots/infrastructure/
+│       ├── persistence/mongo/                # Mongo Bot & Activation Repositories
+│       │   └── impl/                         # Documents, Doc Repositories & Mappers
+│       ├── telegram/                         # TelegramClient (Thực thi TelegramGateway bằng RestClient)
+│       ├── security/                         # HmacSha256SignatureVerifier
+│       ├── event/                            # SpringDomainEventPublisher
+│       └── cache/                            # ManagedBotRegistry (In-memory cache)
 │
-├── telegrambots-activation/                  # Module: activation
-│   └── src/main/java/com/lede/telegrambots/activation/
-│       ├── GroupBotActivationService.java     # Activate/deactivate groups
-│       ├── ActivationStore.java              # Port (interface)
-│       ├── MongoActivationStore.java         # Adapter (MongoDB implementation)
-│       └── ActivationResult.java             # Result record
+├── telegrambots-web/                         # Driving Adapters (Entry points, HTTP controllers, Webhooks)
+│   └── src/main/java/com/lede/telegrambots/web/
+│       ├── admin/                            # REST admin endpoints (POST, GET, PUT, DELETE bots)
+│       │   └── impl/                         # Controllers & Services thực thi
+│       ├── telegram/                         # Telegram webhook entry point & commands
+│       │   ├── steps/                        # Telegram pipeline steps (BotLookup, Parse, Execute)
+│       │   ├── command/                      # Các command (/start, /add, /status...)
+│       │   └── impl/                         # TelegramWebhookProcessor & controller impl
+│       └── github/                           # GitHub webhook entry point, events formatting & handling
+│           ├── steps/                        # GitHub pipeline steps (Signature, BotLookup, MatchRepo)
+│           ├── formatter/                    # Event Formatters (Push, Issue, PullRequest...)
+│           ├── handler/                      # GitHub Event Handlers
+│           └── impl/                         # GitHubWebhookProcessor & controller impl
 │
-├── telegrambots-bot/                         # Module: bot
-│   └── src/main/java/com/lede/telegrambots/bot/
-│       ├── BotManagementUseCase.java          # Port interface (contract)
-│       ├── DynamicBotManager.java             # Facade implementation
-│       ├── ManagedBotRegistry.java            # Bot CRUD + in-memory cache
-│       ├── BotRegistration.java               # Command object for upsert
-│       ├── BotStore.java                      # Port (interface)
-│       └── MongoBotStore.java                 # Adapter (MongoDB implementation)
-│
-├── telegrambots-telegram/                    # Module: telegram
-│   └── src/main/java/com/lede/telegrambots/telegram/
-│       ├── TelegramWebhookController.java     # POST /telegram/webhook/{bot}
-│       ├── TelegramClient.java               # Stateless HTTP → Telegram API
-│       ├── TelegramWebhookProcessor.java     # Webhook handler
-│       └── command/                           # Telegram commands
-│           ├── BotCommand.java               # Command interface
-│           ├── CommandContext.java            # Immutable context record
-│           ├── StartCommand.java             # /cmd: /start
-│           ├── HelpCommand.java              # /cmd: /help
-│           ├── IdCommand.java                # /cmd: /id
-│           ├── AddCommand.java               # /cmd: /add @bot
-│           ├── RemoveCommand.java            # /cmd: /remove @bot
-│           └── StatusCommand.java            # /cmd: /status
-│
-├── telegrambots-notification/                # Module: notification
-│   └── src/main/java/com/lede/telegrambots/notification/
-│       └── NotificationService.java          # Render + fan-out to groups
-│
-├── telegrambots-github/                      # Module: github
-│   └── src/main/java/com/lede/telegrambots/github/
-│       ├── GitHubWebhookController.java      # POST /github/webhook/{bot}
-│       ├── GitHubWebhookProcessor.java       # Pipeline: lookup→verify→parse→match→dispatch
-│       ├── HmacSha256SignatureVerifier.java  # HMAC-SHA256 signature check
-│       └── formatter/                        # Event rendering strategies
-│           ├── EventFormatter.java           # Formatter interface
-│           ├── PushEventFormatter.java       # push events
-│           ├── PullRequestEventFormatter.java # pull request events
-│           ├── IssueEventFormatter.java       # issue events
-│           ├── IssueCommentEventFormatter.java # comments on issues/PRs
-│           ├── ReleaseEventFormatter.java     # release events
-│           ├── StarEventFormatter.java        # repository stars
-│           └── WorkflowRunEventFormatter.java # GitHub Actions workflow runs
-│
-├── telegrambots-admin/                       # Module: admin
-│   └── src/main/java/com/lede/telegrambots/admin/
-│       ├── AdminBotController.java            # REST controller
-│       ├── AdminBotService.java               # Service layer
-│       ├── AdminBotMapper.java                # Entity → Response DTO
-│       ├── AdminAccessGuard.java              # Token guard (constant-time)
-│       └── dto/                               # Admin API DTOs
-│
-└── telegrambots-app/                         # Module: app (runner)
+└── telegrambots-app/                         # Bootstrap & Composition Root
     ├── src/main/java/com/lede/telegrambots/  
-    │   └── TelegrambotsApplication.java       # Spring Boot Entry Point
-    ├── src/main/resources/
-    │   └── application.yaml                   # Application configuration file
-    └── src/test/java/com/lede/telegrambots/
-        ├── ModularityTests.java               # Spring Modulith verifier
-        └── TelegrambotsApplicationTests.java  # Smoke test
-```eEventFormatter.java
-│       ├── IssueCommentEventFormatter.java
-│       ├── ReleaseEventFormatter.java
-│       ├── StarEventFormatter.java
-│       └── WorkflowRunEventFormatter.java
-├── notification/
-│   └── NotificationService.java         # Render + fan-out to groups
-└── mongo/
-    ├── entity/
-    │   ├── ManagedBot.java              # managed_bots document
-    │   └── GroupActivation.java         # group_activations document
-    └── repo/
-        ├── ManagedBotRepository.java
-        └── GroupActivationRepository.java
+    │   ├── TelegrambotsApplication.java       # Spring Boot Main Class
+    │   └── UseCaseConfiguration.java         # Spring Configuration (Wiring use cases thuần thành @Bean)
+    └── src/main/resources/
+        └── application.yaml                   # File config ứng dụng (cổng, MongoDB, profiles)
 ```
 
 ---

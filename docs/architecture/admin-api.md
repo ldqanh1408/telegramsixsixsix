@@ -1,6 +1,6 @@
 # AdminBotController
 
-File code chính: `telegrambots-admin/src/main/java/com/lede/telegrambots/admin/AdminBotController.java`
+File code chính: `telegrambots-web/src/main/java/com/lede/telegrambots/admin/impl/AdminBotController.java`
 
 `AdminBotController` là controller quản trị kho bot trong MongoDB. Controller này không xử lý webhook Telegram/GitHub trực tiếp; nhiệm vụ của nó là thêm, cập nhật, xem và xóa các bot mà backend đang quản lý.
 
