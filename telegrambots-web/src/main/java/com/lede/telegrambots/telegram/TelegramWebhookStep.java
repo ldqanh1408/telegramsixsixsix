@@ -1,8 +1,6 @@
 package com.lede.telegrambots.telegram;
 
 import com.lede.telegrambots.domain.pipeline.Step;
-import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
-import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
 
 /**
  * A single stage of the Telegram webhook pipeline. A typed alias over the shared

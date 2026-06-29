@@ -5,7 +5,7 @@ import com.lede.telegrambots.github.GitHubEventRenderer;
 import com.lede.telegrambots.github.GitHubWebhookResult;
 import com.lede.telegrambots.github.GitHubWebhookResult.Outcome;
 import com.lede.telegrambots.github.GitHubWebhookStep;
-import com.lede.telegrambots.github.impl.GitHubWebhookContext;
+import com.lede.telegrambots.github.GitHubWebhookContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;

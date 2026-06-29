@@ -2,8 +2,8 @@ package com.lede.telegrambots.telegram.steps;
 
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
 import com.lede.telegrambots.telegram.dto.Update;
-import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
-import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
+import com.lede.telegrambots.telegram.TelegramWebhookContext;
+import com.lede.telegrambots.telegram.TelegramWebhookResult;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 

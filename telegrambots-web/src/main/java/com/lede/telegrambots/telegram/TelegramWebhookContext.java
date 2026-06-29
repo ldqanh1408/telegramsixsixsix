@@ -1,4 +1,4 @@
-package com.lede.telegrambots.telegram.impl;
+package com.lede.telegrambots.telegram;
 
 import com.lede.telegrambots.domain.bot.ManagedBot;
 import com.lede.telegrambots.telegram.command.BotCommand;

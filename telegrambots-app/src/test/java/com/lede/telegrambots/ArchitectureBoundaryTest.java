@@ -53,6 +53,24 @@ class ArchitectureBoundaryTest {
         ));
     }
 
+    @Test
+    void appCompositionDoesNotReachIntoApplicationStepImplementations() throws IOException {
+        assertNoForbiddenImports("telegrambots-app", List.of(
+                "com.lede.telegrambots.application.activation.steps.",
+                "com.lede.telegrambots.application.bot.steps.",
+                "com.lede.telegrambots.application.notification.steps."
+        ));
+    }
+
+    @Test
+    void publicWebhookPackagesDoNotExposeImplTypes() throws IOException {
+        assertNoForbiddenImports("telegrambots-web", List.of(
+                "com.lede.telegrambots.telegram.impl.TelegramWebhookContext",
+                "com.lede.telegrambots.telegram.impl.TelegramWebhookResult",
+                "com.lede.telegrambots.github.impl.GitHubWebhookContext"
+        ));
+    }
+
     private static void assertNoForbiddenImports(String module, List<String> forbiddenPrefixes) throws IOException {
         Path sourceRoot = projectRoot().resolve(module).resolve("src/main/java");
         List<String> violations;

@@ -1,6 +1,10 @@
 package com.lede.telegrambots.domain.bot;
 
+import com.lede.telegrambots.domain.pipeline.Pipeline;
+import com.lede.telegrambots.domain.pipeline.Step;
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ManagedBot {
@@ -14,6 +18,33 @@ public class ManagedBot {
     private Instant createdAt;
     private Instant updatedAt;
 
+    private static final Pipeline<ValidationContext, String> validationPipeline = new Pipeline<>(List.of(
+            new ValidateUsernameStep(),
+            new ValidateTokenStep()
+    ));
+
+    private record ValidationContext(String username, String token, String existingToken) {}
+
+    private static class ValidateUsernameStep implements Step<ValidationContext, String> {
+        @Override
+        public Optional<String> execute(ValidationContext ctx) {
+            if (ctx.username() == null || ctx.username().isBlank()) {
+                return Optional.of("username is required");
+            }
+            return Optional.empty();
+        }
+    }
+
+    private static class ValidateTokenStep implements Step<ValidationContext, String> {
+        @Override
+        public Optional<String> execute(ValidationContext ctx) {
+            if (ctx.token() == null && ctx.existingToken() == null) {
+                return Optional.of("token is required for a new bot");
+            }
+            return Optional.empty();
+        }
+    }
+
     public ManagedBot(
             String id,
             String username,
@@ -25,9 +56,10 @@ public class ManagedBot {
             Instant createdAt,
             Instant updatedAt
     ) {
-        if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("username is required");
-        }
+        validationPipeline.run(new ValidationContext(username, token, token))
+                .ifPresent(error -> {
+                    throw new IllegalArgumentException(error);
+                });
         this.id = id;
         this.username = username;
         this.token = token;
@@ -91,12 +123,10 @@ public class ManagedBot {
     }
 
     private static void requireValid(String username, BotRegistration registration, String existingToken) {
-        if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("username is required");
-        }
-        if (registration.tokenOrNull() == null && existingToken == null) {
-            throw new IllegalArgumentException("token is required for a new bot");
-        }
+        validationPipeline.run(new ValidationContext(username, registration.tokenOrNull(), existingToken))
+                .ifPresent(error -> {
+                    throw new IllegalArgumentException(error);
+                });
     }
 
     private static String generateSecret() {

@@ -1,6 +1,7 @@
 package com.lede.telegrambots.telegram.impl;
 
-import com.lede.telegrambots.telegram.impl.TelegramWebhookResult.Outcome;
+import com.lede.telegrambots.telegram.TelegramWebhookResult;
+import com.lede.telegrambots.telegram.TelegramWebhookResult.Outcome;
 import com.lede.telegrambots.telegram.dto.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

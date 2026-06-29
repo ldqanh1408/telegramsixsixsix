@@ -1,8 +1,8 @@
 package com.lede.telegrambots.telegram.steps;
 
 import com.lede.telegrambots.telegram.TelegramWebhookStep;
-import com.lede.telegrambots.telegram.impl.TelegramWebhookContext;
-import com.lede.telegrambots.telegram.impl.TelegramWebhookResult;
+import com.lede.telegrambots.telegram.TelegramWebhookContext;
+import com.lede.telegrambots.telegram.TelegramWebhookResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;

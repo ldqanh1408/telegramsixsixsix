@@ -1,6 +1,6 @@
 package com.lede.telegrambots.github.steps;
 
-import com.lede.telegrambots.github.impl.GitHubWebhookContext;
+import com.lede.telegrambots.github.GitHubWebhookContext;
 import com.lede.telegrambots.github.GitHubWebhookResult;
 import com.lede.telegrambots.github.GitHubWebhookStep;
 
