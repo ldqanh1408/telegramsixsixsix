@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 class SpringDomainEventPublisher implements DomainEventPublisher {
-
+    //
     private final ApplicationEventPublisher delegate;
 
     SpringDomainEventPublisher(ApplicationEventPublisher delegate) {
